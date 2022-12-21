@@ -1,10 +1,13 @@
 #include "db.hpp"
 
+#include "snapshot/snapshot_reader.hpp"
 #include "snapshot/snapshot_writer.hpp"
+#include "string_object.hpp"
 
 using libcache::expire::SteadyTimePoint;
 using libcache::expire::SystemTimePoint;
 using libcache::expire::TimePoint;
+using libcache::snapshot::SnapshotReader;
 using libcache::snapshot::SnapshotWriter;
 using std::lock_guard;
 using std::make_shared;
@@ -13,15 +16,6 @@ using std::shared_ptr;
 using std::string;
 
 namespace libcache::db {
-
-DB::~DB() {
-  lock_guard<mutex> lock(mutex_);
-  for (auto& [_, obj] : objects_) {
-    if (obj->expire_at()) {
-      RemoveExpire(obj);
-    }
-  }
-}
 
 void DB::Tick() {
   lock_guard<mutex> lock(mutex_);
@@ -42,6 +36,58 @@ void DB::DumpSnapshot(Status& status, const string& path) const {
     }
   }
   status = writer->Close();
+}
+
+void DB::LoadSnapshot(Status& status, const string& path) {
+  status = {};
+
+  lock_guard<mutex> lock(mutex_);
+  Clear();
+
+  auto reader = SnapshotReader::Open(path, status);
+  if (status.Error()) {
+    (void)reader->Close();
+    return;
+  }
+
+  int64_t now = SystemTimePoint::Now();
+
+  while (1) {
+    auto obj = reader->Read(status);
+    if (status.code() == kEof) {
+      status = reader->Close();
+      return;
+    }
+    if (status.Error()) {
+      Clear();
+      (void)reader->Close();
+      return;
+    }
+
+    if (obj.has_string_object()) {
+      auto string_obj = make_shared<StringObject>(obj.string_object().value());
+      PutObject(obj.key(), string_obj);
+      auto pxat = obj.pxat();
+      if (pxat != INT64_MAX && pxat > now) {
+        ExpireAtUnixMsec(obj.key(), pxat);
+      }
+      continue;
+    }
+
+    status = Status{kCorrupt};
+    Clear();
+    (void)reader->Close();
+    return;
+  }
+}
+
+void DB::Clear() {
+  for (auto& [_, obj] : objects_) {
+    if (obj->expire_at()) {
+      RemoveExpire(obj);
+    }
+  }
+  objects_.clear();
 }
 
 shared_ptr<Object> DB::GetObject(const string& key) const {

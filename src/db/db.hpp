@@ -17,10 +17,14 @@ class DB {
   explicit DB(const Options& options)
       : system_tw_(options.system_time_wheel_bucket_count),
         steady_tw_(options.steady_time_wheel_bucket_count) {}
-  ~DB();
+  ~DB() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    Clear();
+  }
 
   void Tick();
   void DumpSnapshot(Status& status, const std::string& path) const;
+  void LoadSnapshot(Status& status, const std::string& path);
 
   [[nodiscard]] std::optional<Encoding> ObjectEncoding(
       Status& status, const std::string& key) const;
@@ -48,6 +52,8 @@ class DB {
                                                const Expiration& expiration);
 
  private:
+  void Clear();
+
   [[nodiscard]] bool HasObject(const std::string& key) const {
     return objects_.find(key) != objects_.end();
   }

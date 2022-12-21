@@ -121,6 +121,12 @@ class Cache {
   virtual void DumpSnapshot(Status& status, size_t db,
                             const std::string& path) = 0;
 
+  virtual void LoadSnapshot(const std::string& path) = 0;
+  virtual void LoadSnapshot(size_t db, const std::string& path) = 0;
+  virtual void LoadSnapshot(Status& status, const std::string& path) = 0;
+  virtual void LoadSnapshot(Status& status, size_t db,
+                            const std::string& path) = 0;
+
   // Generic 组。
   [[nodiscard]] virtual int64_t Expire(const std::string& key, int64_t seconds,
                                        uint64_t flags = 0) = 0;

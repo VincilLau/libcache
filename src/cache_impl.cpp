@@ -81,4 +81,26 @@ void CacheImpl::DumpSnapshot(Status& status, size_t db, const string& path) {
   dbs_[db]->DumpSnapshot(status, path);
 }
 
+void CacheImpl::LoadSnapshot(const string& path) {
+  LoadSnapshot(current_db_, path);
+}
+
+void CacheImpl::LoadSnapshot(size_t db, const string& path) {
+  Status status;
+  LoadSnapshot(status, db, path);
+  ThrowIfError(status);
+}
+
+void CacheImpl::LoadSnapshot(Status& status, const string& path) {
+  LoadSnapshot(status, current_db_, path);
+}
+
+void CacheImpl::LoadSnapshot(Status& status, size_t db, const string& path) {
+  if (db >= dbs_.size()) {
+    status = Status{kDBIndexOutOfRange};
+    return;
+  }
+  dbs_[db]->LoadSnapshot(status, path);
+}
+
 }  // namespace libcache
