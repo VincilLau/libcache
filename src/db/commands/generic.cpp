@@ -34,7 +34,7 @@ optional<int64_t> DB::ObjectIdleTime(Status& status, const string& key) const {
     return {};
   }
   auto now = SteadyTimePoint::Now();
-  auto msec = now - obj->access_at();
+  auto msec = now - obj->access_time();
   return msec / 1000;
 }
 

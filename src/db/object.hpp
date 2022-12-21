@@ -26,15 +26,15 @@ class Object {
     expire_at_ = expire_at;
   }
 
-  [[nodiscard]] int64_t access_at() const { return access_at_; }
-  void Touch() { access_at_ = expire::SteadyTimePoint::Now(); }
+  [[nodiscard]] int64_t access_time() const { return access_time_; }
+  void Touch() { access_time_ = expire::SteadyTimePoint::Now(); }
 
  protected:
   Object() = default;
 
  private:
   std::shared_ptr<expire::TimePoint> expire_at_;
-  int64_t access_at_ = expire::SteadyTimePoint::Now();
+  int64_t access_time_ = expire::SteadyTimePoint::Now();
 };
 
 }  // namespace libcache::db
