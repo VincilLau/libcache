@@ -132,33 +132,41 @@ class Cache {
   [[nodiscard]] virtual int64_t ExpireTime(Status& status, size_t db,
                                            const std::string& key) = 0;
 
-  virtual int64_t Persist(const std::string& key) = 0;
-  virtual int64_t Persist(size_t db, const std::string& key) = 0;
-  virtual int64_t Persist(Status& status, const std::string& key) = 0;
-  virtual int64_t Persist(Status& status, size_t db,
-                          const std::string& key) = 0;
+  [[nodiscard]] virtual int64_t Persist(const std::string& key) = 0;
+  [[nodiscard]] virtual int64_t Persist(size_t db, const std::string& key) = 0;
+  [[nodiscard]] virtual int64_t Persist(Status& status,
+                                        const std::string& key) = 0;
+  [[nodiscard]] virtual int64_t Persist(Status& status, size_t db,
+                                        const std::string& key) = 0;
 
-  virtual int64_t PExpire(const std::string& key, int64_t milliseconds,
-                          uint64_t flags = 0) = 0;
-  virtual int64_t PExpire(size_t db, const std::string& key,
-                          int64_t milliseconds, uint64_t flags = 0) = 0;
-  virtual int64_t PExpire(Status& status, const std::string& key,
-                          int64_t milliseconds, uint64_t flags = 0) = 0;
-  virtual int64_t PExpire(Status& status, size_t db, const std::string& key,
-                          int64_t milliseconds, uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpire(const std::string& key,
+                                        int64_t milliseconds,
+                                        uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpire(size_t db, const std::string& key,
+                                        int64_t milliseconds,
+                                        uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpire(Status& status, const std::string& key,
+                                        int64_t milliseconds,
+                                        uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpire(Status& status, size_t db,
+                                        const std::string& key,
+                                        int64_t milliseconds,
+                                        uint64_t flags = 0) = 0;
 
-  virtual int64_t PExpireAt(const std::string& key,
-                            int64_t unix_time_milliseconds,
-                            uint64_t flags = 0) = 0;
-  virtual int64_t PExpireAt(Status& status, const std::string& key,
-                            int64_t unix_time_milliseconds,
-                            uint64_t flags = 0) = 0;
-  virtual int64_t PExpireAt(size_t db, const std::string& key,
-                            int64_t unix_time_milliseconds,
-                            uint64_t flags = 0) = 0;
-  virtual int64_t PExpireAt(Status& status, size_t db, const std::string& key,
-                            int64_t unix_time_milliseconds,
-                            uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpireAt(const std::string& key,
+                                          int64_t unix_time_milliseconds,
+                                          uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpireAt(Status& status,
+                                          const std::string& key,
+                                          int64_t unix_time_milliseconds,
+                                          uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpireAt(size_t db, const std::string& key,
+                                          int64_t unix_time_milliseconds,
+                                          uint64_t flags = 0) = 0;
+  [[nodiscard]] virtual int64_t PExpireAt(Status& status, size_t db,
+                                          const std::string& key,
+                                          int64_t unix_time_milliseconds,
+                                          uint64_t flags = 0) = 0;
 
   [[nodiscard]] virtual int64_t PExpireTime(const std::string& key) = 0;
   [[nodiscard]] virtual int64_t PExpireTime(size_t db,
@@ -191,16 +199,16 @@ class Cache {
   [[nodiscard]] virtual std::optional<std::string> Get(
       Status& status, size_t db, const std::string& key) = 0;
 
-  virtual std::optional<std::string> Set(
+  [[nodiscard]] virtual std::optional<std::string> Set(
       const std::string& key, const std::string& value, uint64_t flags = 0,
       const Expiration& expiration = NO_EXPIRE) = 0;
-  virtual std::optional<std::string> Set(
+  [[nodiscard]] virtual std::optional<std::string> Set(
       size_t db, const std::string& key, const std::string& value,
       uint64_t flags = 0, const Expiration& expiration = NO_EXPIRE) = 0;
-  virtual std::optional<std::string> Set(
+  [[nodiscard]] virtual std::optional<std::string> Set(
       Status& status, const std::string& key, const std::string& value,
       uint64_t flags = 0, const Expiration& expiration = NO_EXPIRE) = 0;
-  virtual std::optional<std::string> Set(
+  [[nodiscard]] virtual std::optional<std::string> Set(
       Status& status, size_t db, const std::string& key,
       const std::string& value, uint64_t flags = 0,
       const Expiration& expiration = NO_EXPIRE) = 0;
