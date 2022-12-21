@@ -11,8 +11,7 @@ namespace libcache {
 
 class CacheImpl : public Cache {
  public:
-  [[nodiscard]] static CacheImpl* Create(Status& status,
-                                         const Options& options);
+  [[nodiscard]] static CacheImpl* New(Status& status, const Options& options);
 
   // Generic 组。
   [[nodiscard]] int64_t Expire(const std::string& key, int64_t seconds,

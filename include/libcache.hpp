@@ -94,9 +94,8 @@ class Cache {
  public:
   // 创建一个 Cache 对象。
   // 销毁时直接使用 delete 删除对象。
-  [[nodiscard]] static Cache* Create(const Options& options = {});
-  [[nodiscard]] static Cache* Create(Status& status,
-                                     const Options& options = {});
+  [[nodiscard]] static Cache* New(const Options& options = {});
+  [[nodiscard]] static Cache* New(Status& status, const Options& options = {});
 
   virtual ~Cache() = default;
 

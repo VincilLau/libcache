@@ -7,15 +7,15 @@ using std::make_unique;
 
 namespace libcache {
 
-Cache* Cache::Create(const Options& options) {
+Cache* Cache::New(const Options& options) {
   Status status;
-  auto result = Create(status, options);
+  auto result = New(status, options);
   ThrowIfError(status);
   return result;
 }
 
-Cache* Cache::Create(Status& status, const Options& options) {
-  return CacheImpl::Create(status, options);
+Cache* Cache::New(Status& status, const Options& options) {
+  return CacheImpl::New(status, options);
 }
 
 static Status CheckOptions(const Options& options) {
@@ -34,7 +34,7 @@ static Status CheckOptions(const Options& options) {
   return {};
 }
 
-CacheImpl* CacheImpl::Create(Status& status, const Options& options) {
+CacheImpl* CacheImpl::New(Status& status, const Options& options) {
   status = CheckOptions(options);
   if (status.Error()) {
     return nullptr;
