@@ -14,12 +14,11 @@ optional<string> DB::Get(Status& status, const string& key) const {
   status = {};
   lock_guard<mutex> lock(mutex_);
 
-  auto it = objects_.find(key);
-  if (it == objects_.end()) {
+  auto obj = GetObject(key);
+  if (!obj) {
     return {};
   }
 
-  auto obj = it->second;
   if (!obj->IsString()) {
     status = Status{kWrongType};
     return {};
