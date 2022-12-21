@@ -1,7 +1,9 @@
 #include "cache_impl.hpp"
 #include "status.hpp"
 
+using std::optional;
 using std::string;
+using std::vector;
 
 namespace libcache {
 
@@ -72,6 +74,30 @@ int64_t CacheImpl::ExpireTime(Status& status, size_t db, const string& key) {
     return result;
   }
   return result / 1000;
+}
+
+optional<int64_t> CacheImpl::ObjectIdleTime(const string& key) {
+  return ObjectIdleTime(current_db_, key);
+}
+
+optional<int64_t> CacheImpl::ObjectIdleTime(size_t db, const string& key) {
+  Status status;
+  auto result = ObjectIdleTime(status, db, key);
+  ThrowIfError(status);
+  return result;
+}
+
+optional<int64_t> CacheImpl::ObjectIdleTime(Status& status, const string& key) {
+  return ObjectIdleTime(status, current_db_, key);
+}
+
+optional<int64_t> CacheImpl::ObjectIdleTime(Status& status, size_t db,
+                                            const string& key) {
+  if (db >= dbs_.size()) {
+    status = Status{kDBIndexOutOfRange};
+    return INT64_MIN;
+  }
+  return dbs_[db]->ObjectIdleTime(status, key);
 }
 
 int64_t CacheImpl::Persist(const string& key) {
@@ -193,6 +219,30 @@ int64_t CacheImpl::Pttl(Status& status, size_t db, const string& key) {
     return INT64_MIN;
   }
   return dbs_[db]->Pttl(status, key);
+}
+
+int64_t CacheImpl::Touch(const vector<string>& keys) {
+  return Touch(current_db_, keys);
+}
+
+int64_t CacheImpl::Touch(size_t db, const vector<string>& keys) {
+  Status status;
+  auto result = Touch(status, db, keys);
+  ThrowIfError(status);
+  return result;
+}
+
+int64_t CacheImpl::Touch(Status& status, const vector<string>& keys) {
+  return Touch(status, current_db_, keys);
+}
+
+int64_t CacheImpl::Touch(Status& status, size_t db,
+                         const vector<string>& keys) {
+  if (db >= dbs_.size()) {
+    status = Status{kDBIndexOutOfRange};
+    return INT64_MIN;
+  }
+  return dbs_[db]->Touch(status, keys);
 }
 
 int64_t CacheImpl::Ttl(const string& key) { return Ttl(current_db_, key); }

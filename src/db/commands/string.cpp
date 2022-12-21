@@ -18,6 +18,7 @@ optional<string> DB::Get(Status& status, const string& key) const {
   if (!obj) {
     return {};
   }
+  obj->Touch();
 
   if (!obj->IsString()) {
     status = Status{kWrongType};
@@ -76,6 +77,8 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
   }
 
   if (old_obj->IsString()) {
+    old_obj->Touch();
+
     auto string_obj = dynamic_pointer_cast<StringObject>(old_obj);
     auto old_string = string_obj->value();
     string_obj->set_value(value);

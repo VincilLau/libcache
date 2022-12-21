@@ -21,6 +21,8 @@ class DB {
 
   void Tick();
 
+  [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
+      Status& status, const std::string& key) const;
   [[nodiscard]] int64_t Persist(Status& status, const std::string& key);
   [[nodiscard]] int64_t PExpire(Status& status, const std::string& key,
                                 int64_t milliseconds, uint64_t flags);
@@ -30,6 +32,8 @@ class DB {
   [[nodiscard]] int64_t PExpireTime(Status& status,
                                     const std::string& key) const;
   [[nodiscard]] int64_t Pttl(Status& status, const std::string& key) const;
+  [[nodiscard]] int64_t Touch(Status& status,
+                              const std::vector<std::string>& keys);
 
   [[nodiscard]] std::optional<std::string> Get(Status& status,
                                                const std::string& key) const;

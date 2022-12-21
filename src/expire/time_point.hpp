@@ -69,7 +69,12 @@ class SystemTimePoint : public TimePoint {
                .count();
   }
 
-  static ChronoTimePoint FromUnixMsec(int64_t unix_msec) {
+  [[nodiscard]] static int64_t Now() {
+    auto now = std::chrono::time_point_cast<Duration>(Clock::now());
+    return std::chrono::duration_cast<Duration>(now.time_since_epoch()).count();
+  }
+
+  [[nodiscard]] static ChronoTimePoint FromUnixMsec(int64_t unix_msec) {
     auto now = std::chrono::time_point_cast<Duration>(Clock::now());
     int64_t now_msec =
         std::chrono::duration_cast<Duration>(now.time_since_epoch()).count();
@@ -112,13 +117,18 @@ class SteadyTimePoint : public TimePoint {
                .count();
   }
 
-  static ChronoTimePoint AfterNowSec(int64_t sec) {
+  [[nodiscard]] static int64_t Now() {
+    auto now = std::chrono::time_point_cast<Duration>(Clock::now());
+    return std::chrono::duration_cast<Duration>(now.time_since_epoch()).count();
+  }
+
+  [[nodiscard]] static ChronoTimePoint AfterNowSec(int64_t sec) {
     auto now = Clock::now();
     return std::chrono::time_point_cast<Duration>(now) +
            std::chrono::seconds(sec);
   }
 
-  static ChronoTimePoint AfterNowMsec(int64_t msec) {
+  [[nodiscard]] static ChronoTimePoint AfterNowMsec(int64_t msec) {
     auto now = Clock::now();
     return std::chrono::time_point_cast<Duration>(now) +
            std::chrono::milliseconds(msec);

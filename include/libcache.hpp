@@ -5,6 +5,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace libcache {
 
@@ -132,6 +133,15 @@ class Cache {
   [[nodiscard]] virtual int64_t ExpireTime(Status& status, size_t db,
                                            const std::string& key) = 0;
 
+  [[nodiscard]] virtual std::optional<int64_t> ObjectIdleTime(
+      const std::string& key) = 0;
+  [[nodiscard]] virtual std::optional<int64_t> ObjectIdleTime(
+      size_t db, const std::string& key) = 0;
+  [[nodiscard]] virtual std::optional<int64_t> ObjectIdleTime(
+      Status& status, const std::string& key) = 0;
+  [[nodiscard]] virtual std::optional<int64_t> ObjectIdleTime(
+      Status& status, size_t db, const std::string& key) = 0;
+
   [[nodiscard]] virtual int64_t Persist(const std::string& key) = 0;
   [[nodiscard]] virtual int64_t Persist(size_t db, const std::string& key) = 0;
   [[nodiscard]] virtual int64_t Persist(Status& status,
@@ -182,6 +192,14 @@ class Cache {
                                      const std::string& key) = 0;
   [[nodiscard]] virtual int64_t Pttl(Status& status, size_t db,
                                      const std::string& key) = 0;
+
+  [[nodiscard]] virtual int64_t Touch(const std::vector<std::string>& keys) = 0;
+  [[nodiscard]] virtual int64_t Touch(size_t db,
+                                      const std::vector<std::string>& keys) = 0;
+  [[nodiscard]] virtual int64_t Touch(Status& status,
+                                      const std::vector<std::string>& keys) = 0;
+  [[nodiscard]] virtual int64_t Touch(Status& status, size_t db,
+                                      const std::vector<std::string>& keys) = 0;
 
   [[nodiscard]] virtual int64_t Ttl(const std::string& key) = 0;
   [[nodiscard]] virtual int64_t Ttl(size_t db, const std::string& key) = 0;

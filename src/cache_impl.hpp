@@ -45,6 +45,15 @@ class CacheImpl : public Cache {
   [[nodiscard]] int64_t ExpireTime(Status& status, size_t db,
                                    const std::string& key) override;
 
+  [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
+      const std::string& key) override;
+  [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
+      size_t db, const std::string& key) override;
+  [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
+      Status& status, const std::string& key) override;
+  [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
+      Status& status, size_t db, const std::string& key) override;
+
   [[nodiscard]] int64_t Persist(const std::string& key) override;
   [[nodiscard]] int64_t Persist(size_t db, const std::string& key) override;
   [[nodiscard]] int64_t Persist(Status& status,
@@ -90,6 +99,14 @@ class CacheImpl : public Cache {
   [[nodiscard]] int64_t Pttl(Status& status, const std::string& key) override;
   [[nodiscard]] int64_t Pttl(Status& status, size_t db,
                              const std::string& key) override;
+
+  [[nodiscard]] int64_t Touch(const std::vector<std::string>& keys) override;
+  [[nodiscard]] int64_t Touch(size_t db,
+                              const std::vector<std::string>& keys) override;
+  [[nodiscard]] int64_t Touch(Status& status,
+                              const std::vector<std::string>& keys) override;
+  [[nodiscard]] int64_t Touch(Status& status, size_t db,
+                              const std::vector<std::string>& keys) override;
 
   [[nodiscard]] int64_t Ttl(const std::string& key) override;
   [[nodiscard]] int64_t Ttl(size_t db, const std::string& key) override;

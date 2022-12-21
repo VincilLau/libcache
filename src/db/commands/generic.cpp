@@ -7,10 +7,24 @@ using libcache::expire::SystemTimePoint;
 using libcache::expire::TimePoint;
 using std::lock_guard;
 using std::mutex;
+using std::optional;
 using std::string;
+using std::vector;
 using std::chrono::duration_cast;
 
 namespace libcache::db {
+
+optional<int64_t> DB::ObjectIdleTime(Status& status, const string& key) const {
+  status = {};
+  lock_guard<mutex> lock(mutex_);
+  auto obj = GetObject(key);
+  if (!obj) {
+    return {};
+  }
+  auto now = SteadyTimePoint::Now();
+  auto msec = now - obj->access_at();
+  return msec / 1000;
+}
 
 int64_t DB::Persist(Status& status, const string& key) {
   status = {};
@@ -20,6 +34,8 @@ int64_t DB::Persist(Status& status, const string& key) {
   if (!obj) {
     return 0;
   }
+  obj->Touch();
+
   auto expire_at = obj->expire_at();
   if (!expire_at) {
     return 0;
@@ -47,6 +63,7 @@ int64_t DB::PExpire(Status& status, const string& key, int64_t milliseconds,
   if (!obj) {
     return 0;
   }
+  obj->Touch();
 
   auto expire_at = obj->expire_at();
   if (expire_at) {
@@ -93,6 +110,7 @@ int64_t DB::PExpireAt(Status& status, const string& key,
   if (!obj) {
     return 0;
   }
+  obj->Touch();
 
   auto expire_at = obj->expire_at();
   if (expire_at) {
@@ -128,6 +146,8 @@ int64_t DB::PExpireTime(Status& status, const string& key) const {
   if (!obj) {
     return -2;
   }
+  obj->Touch();
+
   auto expire_at = obj->expire_at();
   if (!expire_at) {
     return -1;
@@ -157,11 +177,28 @@ int64_t DB::Pttl(Status& status, const string& key) const {
   if (!obj) {
     return -2;
   }
+  obj->Touch();
+
   auto expire_at = obj->expire_at();
   if (!expire_at) {
     return -1;
   }
   return expire_at->Pttl();
+}
+
+int64_t DB::Touch(Status& status, const vector<string>& keys) {
+  status = {};
+  lock_guard<mutex> lock(mutex_);
+
+  int64_t count = 0;
+  for (const auto& key : keys) {
+    auto obj = GetObject(key);
+    if (obj) {
+      obj->Touch();
+      count++;
+    }
+  }
+  return count;
 }
 
 }  // namespace libcache::db
