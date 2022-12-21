@@ -83,6 +83,16 @@ class Exception : public std::exception {
   Status status_;
 };
 
+enum class Type {
+  kNone,
+  kString,
+};
+
+enum class Encoding {
+  kRaw,
+  kInt,
+};
+
 // Cache 的选项。
 struct Options {
   size_t db_count = 1;
@@ -132,6 +142,15 @@ class Cache {
                                            const std::string& key) = 0;
   [[nodiscard]] virtual int64_t ExpireTime(Status& status, size_t db,
                                            const std::string& key) = 0;
+
+  [[nodiscard]] virtual std::optional<Encoding> ObjectEncoding(
+      const std::string& key) = 0;
+  [[nodiscard]] virtual std::optional<Encoding> ObjectEncoding(
+      size_t db, const std::string& key) = 0;
+  [[nodiscard]] virtual std::optional<Encoding> ObjectEncoding(
+      Status& status, const std::string& key) = 0;
+  [[nodiscard]] virtual std::optional<Encoding> ObjectEncoding(
+      Status& status, size_t db, const std::string& key) = 0;
 
   [[nodiscard]] virtual std::optional<int64_t> ObjectIdleTime(
       const std::string& key) = 0;
@@ -206,6 +225,13 @@ class Cache {
   [[nodiscard]] virtual int64_t Ttl(Status& status, const std::string& key) = 0;
   [[nodiscard]] virtual int64_t Ttl(Status& status, size_t db,
                                     const std::string& key) = 0;
+
+  [[nodiscard]] virtual enum Type Type(const std::string& key) = 0;
+  [[nodiscard]] virtual enum Type Type(size_t db, const std::string& key) = 0;
+  [[nodiscard]] virtual enum Type Type(Status& status,
+                                       const std::string& key) = 0;
+  [[nodiscard]] virtual enum Type Type(Status& status, size_t db,
+                                       const std::string& key) = 0;
 
   // String 组。
   [[nodiscard]] virtual std::optional<std::string> Get(

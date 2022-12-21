@@ -14,9 +14,21 @@ using std::chrono::duration_cast;
 
 namespace libcache::db {
 
+optional<Encoding> DB::ObjectEncoding(Status& status, const string& key) const {
+  status = {};
+  lock_guard<mutex> lock(mutex_);
+
+  auto obj = GetObject(key);
+  if (!obj) {
+    return {};
+  }
+  return obj->encoding();
+}
+
 optional<int64_t> DB::ObjectIdleTime(Status& status, const string& key) const {
   status = {};
   lock_guard<mutex> lock(mutex_);
+
   auto obj = GetObject(key);
   if (!obj) {
     return {};
@@ -28,8 +40,8 @@ optional<int64_t> DB::ObjectIdleTime(Status& status, const string& key) const {
 
 int64_t DB::Persist(Status& status, const string& key) {
   status = {};
-
   lock_guard<mutex> lock(mutex_);
+
   auto obj = GetObject(key);
   if (!obj) {
     return 0;
@@ -199,6 +211,17 @@ int64_t DB::Touch(Status& status, const vector<string>& keys) {
     }
   }
   return count;
+}
+
+enum Type DB::Type(Status& status, const string& key) const {
+  status = {};
+  lock_guard<mutex> lock(mutex_);
+
+  auto obj = GetObject(key);
+  if (!obj) {
+    return Type::kNone;
+  }
+  return obj->type();
 }
 
 }  // namespace libcache::db

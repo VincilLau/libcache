@@ -21,6 +21,8 @@ class DB {
 
   void Tick();
 
+  [[nodiscard]] std::optional<Encoding> ObjectEncoding(
+      Status& status, const std::string& key) const;
   [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
       Status& status, const std::string& key) const;
   [[nodiscard]] int64_t Persist(Status& status, const std::string& key);
@@ -34,6 +36,7 @@ class DB {
   [[nodiscard]] int64_t Pttl(Status& status, const std::string& key) const;
   [[nodiscard]] int64_t Touch(Status& status,
                               const std::vector<std::string>& keys);
+  [[nodiscard]] enum Type Type(Status& status, const std::string& key) const;
 
   [[nodiscard]] std::optional<std::string> Get(Status& status,
                                                const std::string& key) const;

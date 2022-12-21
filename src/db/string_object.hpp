@@ -1,7 +1,9 @@
 #ifndef LIBCACHE_SRC_DB_STRING_OBJECT_HPP_
 #define LIBCACHE_SRC_DB_STRING_OBJECT_HPP_
 
+#include <cstdint>
 #include <string>
+#include <variant>
 
 #include "db.hpp"
 
@@ -9,15 +11,29 @@ namespace libcache::db {
 
 class StringObject : public Object {
  public:
-  explicit StringObject(std::string value) : value_(std::move(value)) {}
+  explicit StringObject(const std::string& value) { Update(value); }
 
   [[nodiscard]] Type type() const override { return Type::kString; }
+  [[nodiscard]] Encoding encoding() const override;
 
-  [[nodiscard]] const std::string& value() const { return value_; }
-  void set_value(std::string value) { value_ = std::move(value); }
+  [[nodiscard]] bool IsRaw() const { return std::get_if<std::string>(&value_); }
+  [[nodiscard]] bool IsInt() const { return std::get_if<int64_t>(&value_); }
+
+  [[nodiscard]] const std::string& Raw() const {
+    return std::get<std::string>(value_);
+  }
+  [[nodiscard]] int64_t Int() const { return std::get<int64_t>(value_); }
+  [[nodiscard]] std::string String() const {
+    if (IsInt()) {
+      return std::to_string(Int());
+    }
+    return Raw();
+  }
+
+  void Update(const std::string& value);
 
  private:
-  std::string value_;
+  std::variant<std::string, int64_t> value_;
 };
 
 }  // namespace libcache::db

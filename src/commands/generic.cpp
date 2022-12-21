@@ -68,12 +68,37 @@ int64_t CacheImpl::ExpireTime(Status& status, const string& key) {
 }
 
 int64_t CacheImpl::ExpireTime(Status& status, size_t db, const string& key) {
-  int64_t result = PExpireTime(status, db, key);
+  auto result = PExpireTime(status, db, key);
   ThrowIfError(status);
   if (result < 0) {
     return result;
   }
   return result / 1000;
+}
+
+optional<Encoding> CacheImpl::ObjectEncoding(const string& key) {
+  return ObjectEncoding(current_db_, key);
+}
+
+optional<Encoding> CacheImpl::ObjectEncoding(size_t db, const string& key) {
+  Status status;
+  auto result = ObjectEncoding(status, db, key);
+  ThrowIfError(status);
+  return result;
+}
+
+optional<Encoding> CacheImpl::ObjectEncoding(Status& status,
+                                             const string& key) {
+  return ObjectEncoding(status, current_db_, key);
+}
+
+optional<Encoding> CacheImpl::ObjectEncoding(Status& status, size_t db,
+                                             const string& key) {
+  if (db >= dbs_.size()) {
+    status = Status{kDBIndexOutOfRange};
+    return {};
+  }
+  return dbs_[db]->ObjectEncoding(status, key);
 }
 
 optional<int64_t> CacheImpl::ObjectIdleTime(const string& key) {
@@ -259,12 +284,33 @@ int64_t CacheImpl::Ttl(Status& status, const string& key) {
 }
 
 int64_t CacheImpl::Ttl(Status& status, size_t db, const string& key) {
-  int64_t result = Pttl(status, db, key);
+  auto result = Pttl(status, db, key);
   ThrowIfError(status);
   if (result < 0) {
     return result;
   }
   return result / 1000;
+}
+
+enum Type CacheImpl::Type(const string& key) { return Type(current_db_, key); }
+
+enum Type CacheImpl::Type(size_t db, const string& key) {
+  Status status;
+  auto result = Type(status, current_db_, key);
+  ThrowIfError(status);
+  return result;
+}
+
+enum Type CacheImpl::Type(Status& status, const string& key) {
+  return Type(status, current_db_, key);
+}
+
+enum Type CacheImpl::Type(Status& status, size_t db, const string& key) {
+  if (db >= dbs_.size()) {
+    status = Status{kDBIndexOutOfRange};
+    return Type::kNone;
+  }
+  return dbs_[db]->Type(status, key);
 }
 
 }  // namespace libcache

@@ -45,6 +45,15 @@ class CacheImpl : public Cache {
   [[nodiscard]] int64_t ExpireTime(Status& status, size_t db,
                                    const std::string& key) override;
 
+  [[nodiscard]] std::optional<Encoding> ObjectEncoding(
+      const std::string& key) override;
+  [[nodiscard]] std::optional<Encoding> ObjectEncoding(
+      size_t db, const std::string& key) override;
+  [[nodiscard]] std::optional<Encoding> ObjectEncoding(
+      Status& status, const std::string& key) override;
+  [[nodiscard]] std::optional<Encoding> ObjectEncoding(
+      Status& status, size_t db, const std::string& key) override;
+
   [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
       const std::string& key) override;
   [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
@@ -113,6 +122,12 @@ class CacheImpl : public Cache {
   [[nodiscard]] int64_t Ttl(Status& status, const std::string& key) override;
   [[nodiscard]] int64_t Ttl(Status& status, size_t db,
                             const std::string& key) override;
+
+  [[nodiscard]] enum Type Type(const std::string& key) override;
+  [[nodiscard]] enum Type Type(size_t db, const std::string& key) override;
+  [[nodiscard]] enum Type Type(Status& status, const std::string& key) override;
+  [[nodiscard]] enum Type Type(Status& status, size_t db,
+                               const std::string& key) override;
 
   // String 组。
   [[nodiscard]] std::optional<std::string> Get(const std::string& key) override;

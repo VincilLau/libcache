@@ -26,7 +26,7 @@ optional<string> DB::Get(Status& status, const string& key) const {
   }
 
   auto string_obj = dynamic_pointer_cast<StringObject>(obj);
-  return string_obj->value();
+  return string_obj->String();
 }
 
 optional<string> DB::Set(Status& status, const string& key, const string& value,
@@ -70,7 +70,7 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
       return {};
     }
     if (old_obj->IsString()) {
-      return dynamic_pointer_cast<StringObject>(old_obj)->value();
+      return dynamic_pointer_cast<StringObject>(old_obj)->String();
     }
     status = Status{kWrongType};
     return {};
@@ -80,8 +80,8 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
     old_obj->Touch();
 
     auto string_obj = dynamic_pointer_cast<StringObject>(old_obj);
-    auto old_string = string_obj->value();
-    string_obj->set_value(value);
+    auto old_string = string_obj->String();
+    string_obj->Update(value);
 
     if (expiration.px != INT64_MAX) {
       ExpireAfterMsec(key, expiration.px);
