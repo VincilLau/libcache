@@ -23,6 +23,16 @@ static const char* kMessages[] = {
     "option.system_time_wheel_bucket_count can't be zero",
     // kSteadyTimeWheelBucketCountIsZero
     "option.steady_time_wheelbucket_count can't be zero",
+    // kNoSuchFile
+    "no such file",
+    // kIOError
+    "IO Error",
+    // kExpectARegularFile
+    "expect a regular file",
+    // kEof
+    "end of file",
+    // kCorrupt
+    "snapshot file is corrupt",
 };
 
 const char* Status::What() const {

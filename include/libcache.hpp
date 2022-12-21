@@ -48,6 +48,11 @@ static constexpr int kDBCountIsZero = 6;
 static constexpr int kExpireTimerIntervalIsZero = 7;
 static constexpr int kSystemTimeWheelBucketCountIsZero = 8;
 static constexpr int kSteadyTimeWheelBucketCountIsZero = 9;
+static constexpr int kNoSuchFile = 10;
+static constexpr int kIOError = 11;
+static constexpr int kExpectARegularFile = 12;
+static constexpr int kEof = 13;
+static constexpr int kCorrupt = 14;
 
 class Exception;
 
