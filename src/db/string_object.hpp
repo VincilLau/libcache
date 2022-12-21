@@ -24,13 +24,11 @@ class StringObject : public Object {
   }
   [[nodiscard]] int64_t Int() const { return std::get<int64_t>(value_); }
   [[nodiscard]] std::string String() const {
-    if (IsInt()) {
-      return std::to_string(Int());
-    }
-    return Raw();
+    return IsInt() ? std::to_string(Int()) : Raw();
   }
 
   void Update(const std::string& value);
+  [[nodiscard]] std::string Serialize(const std::string& key) override;
 
  private:
   std::variant<std::string, int64_t> value_;

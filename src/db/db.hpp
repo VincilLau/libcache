@@ -20,6 +20,7 @@ class DB {
   ~DB();
 
   void Tick();
+  void DumpSnapshot(Status& status, const std::string& path) const;
 
   [[nodiscard]] std::optional<Encoding> ObjectEncoding(
       Status& status, const std::string& key) const;

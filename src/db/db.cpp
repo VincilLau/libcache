@@ -1,8 +1,11 @@
 #include "db.hpp"
 
+#include "snapshot/snapshot_writer.hpp"
+
 using libcache::expire::SteadyTimePoint;
 using libcache::expire::SystemTimePoint;
 using libcache::expire::TimePoint;
+using libcache::snapshot::SnapshotWriter;
 using std::lock_guard;
 using std::make_shared;
 using std::mutex;
@@ -24,6 +27,21 @@ void DB::Tick() {
   lock_guard<mutex> lock(mutex_);
   system_tw_.Tick();
   steady_tw_.Tick();
+}
+
+void DB::DumpSnapshot(Status& status, const string& path) const {
+  lock_guard<mutex> lock(mutex_);
+
+  auto writer = SnapshotWriter::Open(path, status);
+  for (const auto& [key, _] : objects_) {
+    auto obj = GetObject(key);
+    status = writer->Append(key, obj);
+    if (status.Error()) {
+      (void)writer->Close();
+      return;
+    }
+  }
+  status = writer->Close();
 }
 
 shared_ptr<Object> DB::GetObject(const string& key) const {

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package libcache.snapshot;
+
+message Object {
+  string key = 1;
+  int64 pxat = 2;
+  oneof child {
+    StringObject string_object = 3;
+  }
+}
+
+message StringObject {
+  string value = 1;
+}

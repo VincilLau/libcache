@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "snapshot.pb.h"
+
 using std::get_if;
 using std::string;
 
@@ -66,6 +68,12 @@ void StringObject::Update(const string& value) {
   } else {
     value_ = -static_cast<int64_t>(u64);
   }
+}
+
+string StringObject::Serialize(const string& key) {
+  auto obj = SnapshotObject(key);
+  obj.mutable_string_object()->set_value(String());
+  return obj.SerializeAsString();
 }
 
 }  // namespace libcache::db

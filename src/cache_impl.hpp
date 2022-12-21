@@ -13,6 +13,12 @@ class CacheImpl : public Cache {
  public:
   [[nodiscard]] static CacheImpl* New(Status& status, const Options& options);
 
+  void DumpSnapshot(const std::string& path) override;
+  void DumpSnapshot(size_t db, const std::string& path) override;
+  void DumpSnapshot(Status& status, const std::string& path) override;
+  void DumpSnapshot(Status& status, size_t db,
+                    const std::string& path) override;
+
   // Generic 组。
   [[nodiscard]] int64_t Expire(const std::string& key, int64_t seconds,
                                uint64_t flags = 0) override;

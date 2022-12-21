@@ -4,6 +4,7 @@
 
 using libcache::db::DB;
 using std::make_unique;
+using std::string;
 
 namespace libcache {
 
@@ -56,6 +57,28 @@ void CacheImpl::TimerCallback() {
   for (auto& db : dbs_) {
     db->Tick();
   }
+}
+
+void CacheImpl::DumpSnapshot(const string& path) {
+  DumpSnapshot(current_db_, path);
+}
+
+void CacheImpl::DumpSnapshot(size_t db, const string& path) {
+  Status status;
+  DumpSnapshot(status, db, path);
+  ThrowIfError(status);
+}
+
+void CacheImpl::DumpSnapshot(Status& status, const string& path) {
+  DumpSnapshot(status, current_db_, path);
+}
+
+void CacheImpl::DumpSnapshot(Status& status, size_t db, const string& path) {
+  if (db >= dbs_.size()) {
+    status = Status{kDBIndexOutOfRange};
+    return;
+  }
+  dbs_[db]->DumpSnapshot(status, path);
 }
 
 }  // namespace libcache
