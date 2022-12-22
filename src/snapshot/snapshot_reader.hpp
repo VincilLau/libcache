@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include "libcache.hpp"
+#include "libcache/libcache.hpp"
 #include "record_reader.hpp"
 #include "snapshot.pb.h"
 

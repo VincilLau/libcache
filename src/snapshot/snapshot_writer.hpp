@@ -5,7 +5,7 @@
 #include <string>
 
 #include "db/object.hpp"
-#include "libcache.hpp"
+#include "libcache/libcache.hpp"
 #include "record_writer.hpp"
 
 namespace libcache::snapshot {

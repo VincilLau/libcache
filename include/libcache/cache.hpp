@@ -1,110 +1,17 @@
-#ifndef LIBCACHE_INCLUDE_LIBCACHE_HPP_
-#define LIBCACHE_INCLUDE_LIBCACHE_HPP_
+#ifndef LIBCACHE_INCLUDE_LIBCACHE_CACHE_HPP_
+#define LIBCACHE_INCLUDE_LIBCACHE_CACHE_HPP_
 
 #include <cstdint>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "error.hpp"
+#include "expiration.hpp"
+#include "object.hpp"
+#include "options.hpp"
+
 namespace libcache {
-
-// 命令的选项（标志）。
-#define NX (1ULL)
-#define XX (1ULL << 1)
-#define GT (1ULL << 2)
-#define LT (1ULL << 3)
-#define KEEPTTL (1ULL << 4)
-#define GET (1ULL << 5)
-
-// 过期时间，单位毫秒。
-struct Expiration {
-  int64_t px;
-  int64_t pxat;
-
-  [[nodiscard]] bool operator==(const Expiration& other) const {
-    return px == other.px && pxat == other.pxat;
-  }
-
-  [[nodiscard]] bool operator!=(const Expiration& other) const {
-    return px != other.px || pxat != other.pxat;
-  }
-};
-
-#define NO_EXPIRE (libcache::Expiration{.px = INT64_MAX, .pxat = INT64_MAX})
-#define EX(sec) (libcache::Expiration{.px = (sec)*1000, .pxat = INT64_MAX})
-#define EXAT(msec) (libcache::Expiration{.px = INT64_MAX, .pxat = (msec)*1000})
-#define PX(sec) (libcache::Expiration{.px = (sec), .pxat = INT64_MAX})
-#define PXAT(msec) (libcache::Expiration{.px = INT64_MAX, .pxat = (msec)})
-
-// 错误码。
-static constexpr int kOk = 0;
-static constexpr int kDBIndexOutOfRange = 1;
-static constexpr int kNxAndXxGtOrLtNotCompatible = 2;
-static constexpr int kGtAndLtNotCompatible = 3;
-static constexpr int kWrongType = 4;
-static constexpr int kSyntaxError = 5;
-static constexpr int kDBCountIsZero = 6;
-static constexpr int kExpireTimerIntervalIsZero = 7;
-static constexpr int kSystemTimeWheelBucketCountIsZero = 8;
-static constexpr int kSteadyTimeWheelBucketCountIsZero = 9;
-static constexpr int kNoSuchFile = 10;
-static constexpr int kIOError = 11;
-static constexpr int kExpectARegularFile = 12;
-static constexpr int kEof = 13;
-static constexpr int kCorrupt = 14;
-
-class Exception;
-
-// 命令执行状态。
-class Status {
- public:
-  Status() = default;
-  explicit Status(int code) : code_(code) {}
-
-  [[nodiscard]] int code() const { return code_; }
-
-  [[nodiscard]] bool Ok() const { return code_ == 0; }
-  [[nodiscard]] bool Error() const { return code_ != 0; }
-  [[nodiscard]] const char* What() const;
-
-  void ThrowIfError() const;
-
- private:
-  int code_ = kOk;
-};
-
-// 命令执行出错抛出的异常。
-class Exception : public std::exception {
- public:
-  Exception(const Status& status) : status_(status) {}
-
-  [[nodiscard]] const Status& status() { return status_; }
-  [[nodiscard]] const char* what() const noexcept override {
-    return status_.What();
-  }
-
- private:
-  Status status_;
-};
-
-enum class Type {
-  kNone,
-  kString,
-};
-
-enum class Encoding {
-  kRaw,
-  kInt,
-};
-
-// Cache 的选项。
-struct Options {
-  size_t db_count = 1;
-  size_t expire_timer_interval = 1;
-  size_t system_time_wheel_bucket_count = 1;
-  size_t steady_time_wheel_bucket_count = 1;
-};
 
 class Cache {
  public:
@@ -277,4 +184,4 @@ class Cache {
 
 }  // namespace libcache
 
-#endif  // LIBCACHE_INCLUDE_LIBCACHE_HPP_
+#endif  // LIBCACHE_INCLUDE_LIBCACHE_CACHE_HPP_
