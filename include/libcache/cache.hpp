@@ -129,7 +129,7 @@ class Cache {
   virtual enum Type Type(Status& status, const std::string& key) = 0;
   virtual enum Type Type(Status& status, size_t db, const std::string& key) = 0;
 
-  // String 组。
+  // std::string 组。
   virtual std::optional<std::string> Get(const std::string& key) = 0;
   virtual std::optional<std::string> Get(size_t db, const std::string& key) = 0;
   virtual std::optional<std::string> Get(Status& status,

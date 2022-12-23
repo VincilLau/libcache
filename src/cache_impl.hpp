@@ -119,7 +119,7 @@ class CacheImpl : public Cache {
   enum Type Type(Status& status, const std::string& key) override;
   enum Type Type(Status& status, size_t db, const std::string& key) override;
 
-  // String 组。
+  // std::string 组。
   std::optional<std::string> Get(const std::string& key) override;
   std::optional<std::string> Get(size_t db, const std::string& key) override;
   std::optional<std::string> Get(Status& status,

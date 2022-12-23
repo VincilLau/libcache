@@ -4,6 +4,7 @@
 using std::dynamic_pointer_cast;
 using std::lock_guard;
 using std::make_shared;
+using std::move;
 using std::mutex;
 using std::optional;
 using std::string;
@@ -91,7 +92,7 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
       string_obj->Persist();
     }
 
-    return (flags & GET) ? std::move(old_string) : "OK";
+    return (flags & GET) ? move(old_string) : "OK";
   }
 
   if (flags & GET) {

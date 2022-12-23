@@ -11,7 +11,7 @@ namespace libcache::db {
 
 class StringObject : public Object {
  public:
-  explicit StringObject(Key key, ExpireHelper expire_helper,
+  explicit StringObject(std::string key, ExpireHelper expire_helper,
                         const std::string& value)
       : Object(std::move(key), std::move(expire_helper)) {
     Update(value);

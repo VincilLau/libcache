@@ -13,18 +13,19 @@ namespace libcache::db {
 class Object {
  public:
   struct ExpireHelper {
-    std::function<expire::BootTime(const Key&, int64_t)> px;
-    std::function<expire::UnixTime(const Key&, int64_t)> pxat;
+    std::function<expire::BootTime(const std::string&, int64_t)> px;
+    std::function<expire::UnixTime(const std::string&, int64_t)> pxat;
     std::function<void(const expire::TimePoint*)> persist;
   };
 
-  explicit Object(Key key, ExpireHelper expire_helper)
+  explicit Object(std::string key, ExpireHelper expire_helper)
       : key_(std::move(key)), expire_helper_(std::move(expire_helper)) {}
   virtual ~Object() {
     if (HasExpire()) {
       Persist();
     }
   }
+  const std::string& key() const { return key_; }
 
   virtual Type type() const = 0;
   bool IsString() const { return type() == Type::kString; }
@@ -56,7 +57,7 @@ class Object {
 
  private:
   ExpireHelper expire_helper_;
-  Key key_;
+  std::string key_;
   int64_t access_ = expire::UnixTime::Now();
   std::shared_ptr<expire::TimePoint> expire_;
 };

@@ -6,10 +6,6 @@
 
 namespace libcache {
 
-using Key = std::string;
-using Integer = int64_t;
-using String = std::string;
-
 enum class Type {
   kNone,
   kString,

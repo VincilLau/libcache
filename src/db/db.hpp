@@ -27,20 +27,20 @@ class DB {
     std::lock_guard<std::mutex> lock(mutex_);
     ClearNoLock();
   }
-  std::optional<Encoding> ObjectEncoding(const Key& key) const;
-  std::optional<Integer> ObjectIdleTime(const Key& key) const;
-  Integer Persist(const Key& key) const;
-  Integer PExpire(Status& status, const Key& key, int64_t milliseconds,
+  std::optional<Encoding> ObjectEncoding(const std::string& key) const;
+  std::optional<int64_t> ObjectIdleTime(const std::string& key) const;
+  int64_t Persist(const std::string& key) const;
+  int64_t PExpire(Status& status, const std::string& key, int64_t milliseconds,
                   uint64_t flags);
-  Integer PExpireAt(Status& status, const Key& key,
+  int64_t PExpireAt(Status& status, const std::string& key,
                     int64_t unix_time_milliseconds, uint64_t flags);
-  Integer PExpireTime(const Key& key) const;
-  Integer Pttl(const Key& key) const;
-  Integer Touch(const std::vector<Key>& keys);
-  enum Type Type(const Key& key) const;
+  int64_t PExpireTime(const std::string& key) const;
+  int64_t Pttl(const std::string& key) const;
+  int64_t Touch(const std::vector<std::string>& keys);
+  enum Type Type(const std::string& key) const;
 
-  std::optional<std::string> Get(Status& status, const Key& key) const;
-  std::optional<std::string> Set(Status& status, const Key& key,
+  std::optional<std::string> Get(Status& status, const std::string& key) const;
+  std::optional<std::string> Set(Status& status, const std::string& key,
                                  const std::string& value, uint64_t flags,
                                  const Expiration& expiration);
 
@@ -50,20 +50,19 @@ class DB {
 
   void ClearNoLock();
 
-  Status Parse(const snapshot::Object& obj);
-
-  bool HasObject(const Key& key) const {
+  bool HasObject(const std::string& key) const {
     return objects_.find(key) != objects_.end();
   }
-  std::shared_ptr<Object> GetObject(const Key& key) const;
-  void PutObject(const Key& key, std::shared_ptr<Object> obj) {
+  std::shared_ptr<Object> GetObject(const std::string& key) const;
+  void PutObject(const std::string& key, std::shared_ptr<Object> obj) {
     assert(!HasObject(key));
+    assert(key == obj->key());
     objects_[key] = obj;
   }
-  void DelObject(const Key& key);
+  void DelObject(const std::string& key);
 
   mutable std::mutex mutex_;
-  std::unordered_map<Key, std::shared_ptr<Object>> objects_;
+  std::unordered_map<std::string, std::shared_ptr<Object>> objects_;
   expire::TimeWheel<expire::UnixTime> unix_tw_;
   expire::TimeWheel<expire::BootTime> boot_tw_;
 };

@@ -1,5 +1,10 @@
 #include "snapshot.hpp"
 
+#include "db/string_object.hpp"
+
+using std::make_shared;
+using std::move;
+using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 
@@ -27,17 +32,27 @@ Status SnapshotReader::Open(const string& path,
   return Status::OK();
 }
 
-Status SnapshotReader::Read(snapshot::Object& obj) {
+Status SnapshotReader::Read(shared_ptr<db::Object>& obj,
+                            db::Object::ExpireHelper helper) {
   string record;
   auto status = record_reader_->Read(record);
   if (status.error()) {
     return status;
   }
 
-  auto ok = obj.ParseFromString(record);
+  snapshot::Object snapshot_obj;
+  auto ok = snapshot_obj.ParseFromString(record);
   if (!ok) {
     return Status::Corrupt();
   }
+
+  if (snapshot_obj.has_string_object()) {
+    auto obj = make_shared<db::StringObject>(
+        snapshot_obj.key(), move(helper), snapshot_obj.string_object().value());
+    obj->Parse(snapshot_obj);
+    return Status::OK();
+  }
+
   return Status::OK();
 }
 

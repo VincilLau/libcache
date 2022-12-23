@@ -15,7 +15,8 @@ class SnapshotReader {
   static Status Open(const std::string& path,
                      std::unique_ptr<SnapshotReader>& reader);
 
-  Status Read(snapshot::Object& obj);
+  Status Read(std::shared_ptr<db::Object>& obj,
+              db::Object::ExpireHelper helper);
 
  private:
   SnapshotReader(std::unique_ptr<RecordReader> record_reader)

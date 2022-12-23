@@ -9,7 +9,6 @@ using libcache::expire::UnixTime;
 using libcache::snapshot::SnapshotReader;
 using libcache::snapshot::SnapshotWriter;
 using std::lock_guard;
-using std::make_shared;
 using std::mutex;
 using std::shared_ptr;
 using std::string;
@@ -19,10 +18,10 @@ namespace libcache::db {
 
 Object::ExpireHelper DB::expire_helper() {
   Object::ExpireHelper helper;
-  helper.px = [this](const Key& key, int64_t ms) -> BootTime {
+  helper.px = [this](const string& key, int64_t ms) -> BootTime {
     return boot_tw_.Add(ms, [this, key = key]() { OnExpired(key); });
   };
-  helper.pxat = [this](const Key& key, int64_t ms) -> UnixTime {
+  helper.pxat = [this](const string& key, int64_t ms) -> UnixTime {
     return unix_tw_.Add(ms, [this, key = key]() { OnExpired(key); });
   };
   helper.persist = [this](const TimePoint* tp) {
@@ -70,8 +69,8 @@ void DB::LoadSnapshot(Status& status, const string& path) {
   }
 
   while (1) {
-    snapshot::Object obj;
-    status = reader->Read(obj);
+    shared_ptr<Object> obj;
+    status = reader->Read(obj, expire_helper());
     if (status.code() == kEof) {
       return;
     }
@@ -80,24 +79,8 @@ void DB::LoadSnapshot(Status& status, const string& path) {
       return;
     }
 
-    status = Parse(obj);
-    if (status.error()) {
-      ClearNoLock();
-      return;
-    }
+    PutObject(obj->key(), obj);
   }
-}
-
-Status DB::Parse(const snapshot::Object& obj) {
-  if (obj.has_string_object()) {
-    auto string_obj = make_shared<StringObject>(obj.key(), expire_helper(),
-                                                obj.string_object().value());
-    string_obj->Parse(obj);
-    PutObject(obj.key(), string_obj);
-    return Status::OK();
-  }
-
-  return Status::Corrupt();
 }
 
 void DB::ClearNoLock() {
@@ -138,7 +121,7 @@ void DB::DelObject(const string& key) {
   objects_.erase(key);
 }
 
-void DB::OnExpired(const Key& key) {
+void DB::OnExpired(const string& key) {
   auto it = objects_.find(key);
   assert(it != objects_.end());
   auto obj = it->second;
