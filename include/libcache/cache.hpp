@@ -32,7 +32,7 @@ class Cache {
   virtual void LoadSnapshot(Status& status, size_t db,
                             const std::string& path) = 0;
 
-  // Generic 组。
+  // Generic 组
   virtual int64_t Expire(const std::string& key, int64_t seconds,
                          uint64_t flags = 0) = 0;
   virtual int64_t Expire(size_t db, const std::string& key, int64_t seconds,
@@ -129,7 +129,15 @@ class Cache {
   virtual enum Type Type(Status& status, const std::string& key) = 0;
   virtual enum Type Type(Status& status, size_t db, const std::string& key) = 0;
 
-  // std::string 组。
+  // String 组
+  virtual int64_t Append(const std::string& key, const std::string& value) = 0;
+  virtual int64_t Append(size_t db, const std::string& key,
+                         const std::string& value) = 0;
+  virtual int64_t Append(Status& status, const std::string& key,
+                         const std::string& value) = 0;
+  virtual int64_t Append(Status& status, size_t db, const std::string& key,
+                         const std::string& value) = 0;
+
   virtual std::optional<std::string> Get(const std::string& key) = 0;
   virtual std::optional<std::string> Get(size_t db, const std::string& key) = 0;
   virtual std::optional<std::string> Get(Status& status,

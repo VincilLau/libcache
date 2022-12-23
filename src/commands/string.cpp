@@ -5,6 +5,31 @@ using std::string;
 
 namespace libcache {
 
+int64_t CacheImpl::Append(const string& key, const string& value) {
+  return Append(current_db_, key, value);
+}
+
+int64_t CacheImpl::Append(size_t db, const string& key, const string& value) {
+  auto status = Status::OK();
+  auto result = Append(status, db, key, value);
+  status.ThrowIfError();
+  return result;
+}
+
+int64_t CacheImpl::Append(Status& status, const string& key,
+                          const string& value) {
+  return Append(status, current_db_, key, value);
+}
+
+int64_t CacheImpl::Append(Status& status, size_t db, const string& key,
+                          const string& value) {
+  if (db >= dbs_.size()) {
+    status = Status::DBIndexOutOfRange();
+    return {};
+  }
+  return dbs_[db]->Append(status, key, value);
+}
+
 optional<string> CacheImpl::Get(const string& key) {
   return Get(current_db_, key);
 }

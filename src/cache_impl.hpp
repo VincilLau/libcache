@@ -25,7 +25,7 @@ class CacheImpl : public Cache {
   void LoadSnapshot(Status& status, size_t db,
                     const std::string& path) override;
 
-  // Generic 组。
+  // Generic 组
   int64_t Expire(const std::string& key, int64_t seconds,
                  uint64_t flags = 0) override;
   int64_t Expire(size_t db, const std::string& key, int64_t seconds,
@@ -119,7 +119,15 @@ class CacheImpl : public Cache {
   enum Type Type(Status& status, const std::string& key) override;
   enum Type Type(Status& status, size_t db, const std::string& key) override;
 
-  // std::string 组。
+  // String 组
+  int64_t Append(const std::string& key, const std::string& value) override;
+  int64_t Append(size_t db, const std::string& key,
+                 const std::string& value) override;
+  int64_t Append(Status& status, const std::string& key,
+                 const std::string& value) override;
+  int64_t Append(Status& status, size_t db, const std::string& key,
+                 const std::string& value) override;
+
   std::optional<std::string> Get(const std::string& key) override;
   std::optional<std::string> Get(size_t db, const std::string& key) override;
   std::optional<std::string> Get(Status& status,

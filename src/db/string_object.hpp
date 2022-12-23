@@ -20,12 +20,13 @@ class StringObject : public Object {
   Type type() const override { return Type::kString; }
   Encoding encoding() const override;
 
+  const std::string& raw() const { return std::get<std::string>(value_); }
+  std::string& mut_raw() { return *std::get_if<std::string>(&value_); }
+  int64_t int64() const { return std::get<int64_t>(value_); }
+  std::string str() const { return IsInt() ? std::to_string(int64()) : raw(); }
+
   bool IsRaw() const { return std::get_if<std::string>(&value_); }
   bool IsInt() const { return std::get_if<int64_t>(&value_); }
-
-  const std::string& Raw() const { return std::get<std::string>(value_); }
-  int64_t Int() const { return std::get<int64_t>(value_); }
-  std::string String() const { return IsInt() ? std::to_string(Int()) : Raw(); }
 
   void Update(const std::string& value);
   std::string Serialize() override;

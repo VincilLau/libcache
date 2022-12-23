@@ -39,6 +39,8 @@ class DB {
   int64_t Touch(const std::vector<std::string>& keys);
   enum Type Type(const std::string& key) const;
 
+  int64_t Append(Status& status, const std::string& key,
+                 const std::string& value);
   std::optional<std::string> Get(Status& status, const std::string& key) const;
   std::optional<std::string> Set(Status& status, const std::string& key,
                                  const std::string& value, uint64_t flags,

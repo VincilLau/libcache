@@ -43,7 +43,7 @@ void StringObject::Update(const string& value) {
 
 string StringObject::Serialize() {
   auto obj = SnapshotObject();
-  obj.mutable_string_object()->set_value(String());
+  obj.mutable_string_object()->set_value(string());
   return obj.SerializeAsString();
 }
 

@@ -9,6 +9,42 @@ using std::this_thread::sleep_for;
 
 namespace libcache {
 
+TEST(TestString, Append) {
+  auto cache = Cache::New();
+
+  auto len = cache->Append("key", "hello");
+  EXPECT_EQ(len, 5);
+  auto result = cache->Get("key");
+  EXPECT_EQ(result.value(), "hello");
+
+  len = cache->Append("key", "world");
+  EXPECT_EQ(len, 10);
+  result = cache->Get("key");
+  EXPECT_EQ(result.value(), "helloworld");
+
+  delete cache;
+}
+
+TEST(TestString, AppendWithExpire) {
+  auto cache = Cache::New();
+
+  auto result = cache->Set("key", "hello", 0, EX(1));
+  EXPECT_EQ(result.value(), "OK");
+  result = cache->Get("key");
+  EXPECT_EQ(result.value(), "hello");
+
+  auto len = cache->Append("key", "world");
+  EXPECT_EQ(len, 10);
+  result = cache->Get("key");
+  EXPECT_EQ(result.value(), "helloworld");
+
+  auto pttl = cache->Pttl("key");
+  EXPECT_LE(pttl, 1000);
+  EXPECT_GT(pttl, 0);
+
+  delete cache;
+}
+
 TEST(TestString, Set) {
   auto cache = Cache::New();
 

@@ -11,6 +11,24 @@ using std::string;
 
 namespace libcache::db {
 
+int64_t DB::Append(Status& status, const string& key, const string& value) {
+  status = Status::OK();
+  lock_guard<mutex> lock(mutex_);
+
+  auto obj = GetObject(key);
+  if (!obj) {
+    auto str_obj = make_shared<StringObject>(key, expire_helper(), value);
+    PutObject(key, str_obj);
+    return value.size();
+  }
+
+  obj->Touch();
+  auto str_obj = dynamic_pointer_cast<StringObject>(obj);
+  auto& raw = str_obj->mut_raw();
+  raw.append(value);
+  return raw.size();
+}
+
 optional<string> DB::Get(Status& status, const string& key) const {
   status = Status::OK();
   lock_guard<mutex> lock(mutex_);
@@ -27,7 +45,7 @@ optional<string> DB::Get(Status& status, const string& key) const {
   }
 
   auto str_obj = dynamic_pointer_cast<StringObject>(obj);
-  return str_obj->String();
+  return str_obj->str();
 }
 
 optional<string> DB::Set(Status& status, const string& key, const string& value,
@@ -71,7 +89,7 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
       return {};
     }
     if (old_obj->IsString()) {
-      return dynamic_pointer_cast<StringObject>(old_obj)->String();
+      return dynamic_pointer_cast<StringObject>(old_obj)->str();
     }
     status = Status::WrongType();
     return {};
@@ -81,7 +99,7 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
     old_obj->Touch();
 
     auto str_obj = dynamic_pointer_cast<StringObject>(old_obj);
-    auto old_str = str_obj->String();
+    auto old_str = str_obj->str();
     str_obj->Update(value);
 
     if (expiration.px != INT64_MAX) {
