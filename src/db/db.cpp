@@ -19,7 +19,8 @@ namespace libcache::db {
 Object::ExpireHelper DB::expire_helper() {
   Object::ExpireHelper helper;
   helper.px = [this](const string& key, int64_t ms) -> BootTime {
-    return boot_tw_.Add(ms, [this, key = key]() { OnExpired(key); });
+    int64_t at = ms + BootTime::Now();
+    return boot_tw_.Add(at, [this, key = key]() { OnExpired(key); });
   };
   helper.pxat = [this](const string& key, int64_t ms) -> UnixTime {
     return unix_tw_.Add(ms, [this, key = key]() { OnExpired(key); });

@@ -30,10 +30,10 @@ class TimeWheel {
 };
 
 template <typename TP>
-inline TP TimeWheel<TP>::Add(int64_t ms, Callback callback) {
-  size_t index = ms % buckets_.size();
+inline TP TimeWheel<TP>::Add(int64_t at, Callback callback) {
+  size_t index = at % buckets_.size();
   auto& bucket = buckets_[index];
-  TP tp(ms, next_seq_++);
+  TP tp(at, next_seq_++);
   bucket[tp] = std::move(callback);
   return tp;
 }
@@ -60,7 +60,6 @@ inline void TimeWheel<TP>::Tick() {
 
     const Callback& callback = front->second;
     callback();
-    bucket.erase(front);
   }
 }
 
