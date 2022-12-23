@@ -12,34 +12,53 @@ namespace libcache::db {
 
 class Object {
  public:
+  struct ExpireHelper {
+    std::function<expire::BootTime(const Key&, int64_t)> px;
+    std::function<expire::UnixTime(const Key&, int64_t)> pxat;
+    std::function<void(const expire::TimePoint*)> persist;
+  };
+
+  explicit Object(Key key, ExpireHelper expire_helper)
+      : key_(std::move(key)), expire_helper_(std::move(expire_helper)) {}
   virtual ~Object() {
-    // 析构 Object 前必须去除过期时间。
-    assert(!expire_at_);
+    if (HasExpire()) {
+      Persist();
+    }
   }
 
-  [[nodiscard]] virtual Type type() const = 0;
-  [[nodiscard]] bool IsString() const { return type() == Type::kString; }
+  virtual Type type() const = 0;
+  bool IsString() const { return type() == Type::kString; }
 
-  [[nodiscard]] virtual Encoding encoding() const = 0;
+  virtual Encoding encoding() const = 0;
 
-  [[nodiscard]] auto expire_at() const { return expire_at_; }
-  void set_expire_at(std::shared_ptr<expire::TimePoint> expire_at) {
-    expire_at_ = expire_at;
+  int64_t idletime() const { return expire::UnixTime::Now() - access_; }
+  void Touch() { access_ = expire::UnixTime::Now(); }
+
+  int64_t pttl() const {
+    assert(HasExpire());
+    return expire_->pttl();
+  }
+  int64_t expire_unix() const {
+    assert(HasExpire());
+    return expire_->ToUnixTime();
   }
 
-  [[nodiscard]] int64_t access_time() const { return access_time_; }
-  void Touch() { access_time_ = expire::SteadyTimePoint::Now(); }
+  bool HasExpire() const { return expire_.get(); }
+  void Px(int64_t ms);
+  void Pxat(int64_t ms);
+  void Persist();
 
-  [[nodiscard]] virtual std::string Serialize(const std::string& key) = 0;
+  virtual std::string Serialize() = 0;
+  void Parse(const snapshot::Object& obj);
 
  protected:
-  Object() = default;
-
-  [[nodiscard]] snapshot::Object SnapshotObject(const std::string& key) const;
+  snapshot::Object SnapshotObject() const;
 
  private:
-  std::shared_ptr<expire::TimePoint> expire_at_;
-  int64_t access_time_ = expire::SteadyTimePoint::Now();
+  ExpireHelper expire_helper_;
+  Key key_;
+  int64_t access_ = expire::UnixTime::Now();
+  std::shared_ptr<expire::TimePoint> expire_;
 };
 
 }  // namespace libcache::db

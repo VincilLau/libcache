@@ -1,9 +1,8 @@
 #include "coding.hpp"
 
-using std::istream;
 using std::string;
 
-namespace libcache::snapshot {
+namespace libcache::util {
 
 void AppendVarU64(string& buf, uint64_t u64) {
   while (u64 > 0x7f) {
@@ -25,4 +24,4 @@ void PutFixedU32(char buf[4], uint32_t u32) {
   bytes[3] = u32 >> 24 & 0x7f;
 }
 
-}  // namespace libcache::snapshot
+}  // namespace libcache::util

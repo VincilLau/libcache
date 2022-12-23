@@ -1,101 +1,63 @@
 #include "time_point.hpp"
 
+using std::chrono::duration_cast;
+using std::chrono::steady_clock;
+using std::chrono::system_clock;
+
 namespace libcache::expire {
 
-bool SystemTimePoint::operator<(const SystemTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec < other_msec) {
+bool UnixTime::operator<(const UnixTime& other) const {
+  if (ms() < other.ms()) {
     return true;
   }
-  if (msec > other_msec) {
+  if (ms() > other.ms()) {
     return false;
   }
   return seq() < other.seq();
 }
 
-bool SystemTimePoint::operator>(const SystemTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec > other_msec) {
-    return true;
-  }
-  if (msec < other_msec) {
-    return false;
-  }
-  return seq() > other.seq();
+int64_t UnixTime::ToBootTime() const {
+  auto unix_now = system_clock::now();
+  auto boot_now = steady_clock::now();
+  auto unix_dur = duration_cast<Duration>(unix_now.time_since_epoch());
+  auto boot_dur = duration_cast<Duration>(unix_now.time_since_epoch());
+  int64_t unix_ms = unix_dur.count();
+  int64_t boot_ms = boot_dur.count();
+  int64_t boot_time = ms() - unix_ms + boot_ms;
+  return boot_time;
 }
 
-bool SystemTimePoint::operator<=(const SystemTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec < other_msec) {
-    return true;
-  }
-  if (msec > other_msec) {
-    return false;
-  }
-  return seq() <= other.seq();
+int64_t UnixTime::Now() {
+  auto now = system_clock::now();
+  auto dur = duration_cast<Duration>(now.time_since_epoch());
+  return dur.count();
 }
 
-bool SystemTimePoint::operator>=(const SystemTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec > other_msec) {
+bool BootTime::operator<(const BootTime& other) const {
+  if (ms() < other.ms()) {
     return true;
   }
-  if (msec < other_msec) {
-    return false;
-  }
-  return seq() >= other.seq();
-}
-
-bool SteadyTimePoint::operator<(const SteadyTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec < other_msec) {
-    return true;
-  }
-  if (msec > other_msec) {
+  if (ms() > other.ms()) {
     return false;
   }
   return seq() < other.seq();
 }
 
-bool SteadyTimePoint::operator>(const SteadyTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec > other_msec) {
-    return true;
-  }
-  if (msec < other_msec) {
-    return false;
-  }
-  return seq() > other.seq();
+int64_t BootTime::ToUnixTime() const {
+  auto unix_now = system_clock::now();
+  auto boot_now = steady_clock::now();
+  auto unix_dur = duration_cast<Duration>(unix_now.time_since_epoch());
+  auto boot_dur = duration_cast<Duration>(unix_now.time_since_epoch());
+  int64_t unix_ms = unix_dur.count();
+  int64_t boot_ms = boot_dur.count();
+  int64_t unix_time = ms() - boot_ms + unix_ms;
+  return unix_time;
 }
 
-bool SteadyTimePoint::operator<=(const SteadyTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec < other_msec) {
-    return true;
-  }
-  if (msec > other_msec) {
-    return false;
-  }
-  return seq() <= other.seq();
-}
-
-bool SteadyTimePoint::operator>=(const SteadyTimePoint& other) const {
-  int64_t msec = Msec();
-  int64_t other_msec = other.Msec();
-  if (msec > other_msec) {
-    return true;
-  }
-  if (msec < other_msec) {
-    return false;
-  }
-  return seq() >= other.seq();
+int64_t BootTime::Now() {
+  auto now = steady_clock::now();
+  auto dur = duration_cast<Duration>(now.time_since_epoch());
+  return dur.count();
 }
 
 }  // namespace libcache::expire

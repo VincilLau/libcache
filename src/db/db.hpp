@@ -14,62 +14,58 @@ namespace libcache::db {
 
 class DB {
  public:
-  explicit DB(const Options& options)
-      : system_tw_(options.system_time_wheel_bucket_count),
-        steady_tw_(options.steady_time_wheel_bucket_count) {}
-  ~DB() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    Clear();
-  }
+  explicit DB(const DBOptions& options)
+      : unix_tw_(options.time_wheel_size), boot_tw_(options.time_wheel_size) {}
+  ~DB() { FlushDB(); }
 
-  void Tick();
+  void CleanUpExpired();
+
   void DumpSnapshot(Status& status, const std::string& path) const;
   void LoadSnapshot(Status& status, const std::string& path);
 
-  [[nodiscard]] std::optional<Encoding> ObjectEncoding(
-      Status& status, const std::string& key) const;
-  [[nodiscard]] std::optional<int64_t> ObjectIdleTime(
-      Status& status, const std::string& key) const;
-  [[nodiscard]] int64_t Persist(Status& status, const std::string& key);
-  [[nodiscard]] int64_t PExpire(Status& status, const std::string& key,
-                                int64_t milliseconds, uint64_t flags);
-  [[nodiscard]] int64_t PExpireAt(Status& status, const std::string& key,
-                                  int64_t unix_time_milliseconds,
-                                  uint64_t flags);
-  [[nodiscard]] int64_t PExpireTime(Status& status,
-                                    const std::string& key) const;
-  [[nodiscard]] int64_t Pttl(Status& status, const std::string& key) const;
-  [[nodiscard]] int64_t Touch(Status& status,
-                              const std::vector<std::string>& keys);
-  [[nodiscard]] enum Type Type(Status& status, const std::string& key) const;
+  void FlushDB() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    ClearNoLock();
+  }
+  std::optional<Encoding> ObjectEncoding(const Key& key) const;
+  std::optional<Integer> ObjectIdleTime(const Key& key) const;
+  Integer Persist(const Key& key) const;
+  Integer PExpire(Status& status, const Key& key, int64_t milliseconds,
+                  uint64_t flags);
+  Integer PExpireAt(Status& status, const Key& key,
+                    int64_t unix_time_milliseconds, uint64_t flags);
+  Integer PExpireTime(const Key& key) const;
+  Integer Pttl(const Key& key) const;
+  Integer Touch(const std::vector<Key>& keys);
+  enum Type Type(const Key& key) const;
 
-  [[nodiscard]] std::optional<std::string> Get(Status& status,
-                                               const std::string& key) const;
-  [[nodiscard]] std::optional<std::string> Set(Status& status,
-                                               const std::string& key,
-                                               const std::string& value,
-                                               uint64_t flags,
-                                               const Expiration& expiration);
+  std::optional<std::string> Get(Status& status, const Key& key) const;
+  std::optional<std::string> Set(Status& status, const Key& key,
+                                 const std::string& value, uint64_t flags,
+                                 const Expiration& expiration);
 
  private:
-  void Clear();
+  Object::ExpireHelper expire_helper();
+  void OnExpired(const std::string& key);
 
-  [[nodiscard]] bool HasObject(const std::string& key) const {
+  void ClearNoLock();
+
+  Status Parse(const snapshot::Object& obj);
+
+  bool HasObject(const Key& key) const {
     return objects_.find(key) != objects_.end();
   }
-  [[nodiscard]] std::shared_ptr<Object> GetObject(const std::string& key) const;
-  void PutObject(const std::string& key, std::shared_ptr<Object> obj);
-  void DelObject(const std::string& key);
-
-  void ExpireAfterMsec(const std::string& key, int64_t msec);
-  void ExpireAtUnixMsec(const std::string& key, int64_t msec);
-  void RemoveExpire(std::shared_ptr<Object> obj);
-  void OnExpire(const std::string& key);
+  std::shared_ptr<Object> GetObject(const Key& key) const;
+  void PutObject(const Key& key, std::shared_ptr<Object> obj) {
+    assert(!HasObject(key));
+    objects_[key] = obj;
+  }
+  void DelObject(const Key& key);
 
   mutable std::mutex mutex_;
-  std::unordered_map<std::string, std::shared_ptr<Object>> objects_;
-  expire::TimeWheel<expire::SystemTimePoint> system_tw_;
-  expire::TimeWheel<expire::SteadyTimePoint> steady_tw_;
+  std::unordered_map<Key, std::shared_ptr<Object>> objects_;
+  expire::TimeWheel<expire::UnixTime> unix_tw_;
+  expire::TimeWheel<expire::BootTime> boot_tw_;
 };
 
 }  // namespace libcache::db

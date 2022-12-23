@@ -10,7 +10,6 @@
 
 namespace libcache::expire {
 
-// 时间轮，每 tick 调用一个桶中已过期的回调并清除。
 template <typename TP>
 class TimeWheel {
  public:
@@ -20,8 +19,7 @@ class TimeWheel {
     assert(bucket_count > 0);
   }
 
-  [[nodiscard]] TP Add(typename TP::ChronoTimePoint expire_at,
-                       Callback callback);
+  TP Add(int64_t ms, Callback callback);
   void Remove(const TP& tp);
   void Tick();
 
@@ -32,21 +30,19 @@ class TimeWheel {
 };
 
 template <typename TP>
-inline TP TimeWheel<TP>::Add(typename TP::ChronoTimePoint expire_at,
-                             Callback callback) {
-  size_t index = std::chrono::duration_cast<TimePoint::Duration>(
-                     expire_at.time_since_epoch())
-                     .count() %
-                 buckets_.size();
-  TP tp(std::move(expire_at), next_seq_++);
-  buckets_[index].insert({tp, std::move(callback)});
+inline TP TimeWheel<TP>::Add(int64_t ms, Callback callback) {
+  size_t index = ms % buckets_.size();
+  auto& bucket = buckets_[index];
+  TP tp(ms, next_seq_++);
+  bucket[tp] = std::move(callback);
   return tp;
 }
 
 template <typename TP>
 inline void TimeWheel<TP>::Remove(const TP& tp) {
-  size_t index = tp.Msec() % buckets_.size();
-  auto n = buckets_[index].erase(tp);
+  size_t index = tp.ms() % buckets_.size();
+  auto& bucket = buckets_[index];
+  auto n = bucket.erase(tp);
   assert(n);
 }
 
@@ -58,7 +54,7 @@ inline void TimeWheel<TP>::Tick() {
   while (!bucket.empty()) {
     auto front = bucket.begin();
     const TP& tp = front->first;
-    if (tp.Pttl() > 0) {
+    if (tp.pttl() > 0) {
       break;
     }
 

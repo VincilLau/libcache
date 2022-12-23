@@ -3,148 +3,76 @@
 
 #include <chrono>
 #include <cstdint>
-#include <utility>
 
 namespace libcache::expire {
 
-class SystemTimePoint;
-class SteadyTimePoint;
+class UnixTime;
+class BootTime;
 
-// 通过时间和序列号标识的时间点
 class TimePoint {
  public:
-  using Unit = std::chrono::milliseconds;
-  using Ratio = std::milli;
-  using Duration = std::chrono::duration<int64_t, Ratio>;
+  using Duration = std::chrono::duration<int64_t, std::milli>;
 
   enum class Type {
-    kSystem,
-    kSteady,
+    kUnixTime,
+    kBootTime,
   };
 
-  [[nodiscard]] virtual Type type() const = 0;
-  [[nodiscard]] virtual int64_t Msec() const = 0;
-  [[nodiscard]] virtual int64_t Pttl() const = 0;
+  TimePoint(int64_t ms, uint64_t seq) : ms_(ms), seq_(seq) {}
 
-  [[nodiscard]] const SystemTimePoint* ToSystem() const;
-  [[nodiscard]] const SteadyTimePoint* ToSteady() const;
+  int64_t ms() const { return ms_; }
+  virtual int64_t pttl() const = 0;
+
+  virtual Type type() const = 0;
+
+  virtual int64_t ToUnixTime() const = 0;
+  virtual int64_t ToBootTime() const = 0;
 
  protected:
-  explicit TimePoint(uint64_t seq) : seq_(seq) {}
-  [[nodiscard]] uint64_t seq() const { return seq_; }
+  uint64_t seq() const { return seq_; }
 
  private:
+  int64_t ms_;
   uint64_t seq_;
 };
 
-// std::chrono::system_clock 时间点。
-class SystemTimePoint : public TimePoint {
+class UnixTime : public TimePoint {
  public:
-  using Clock = std::chrono::system_clock;
-  using ChronoTimePoint = std::chrono::time_point<Clock, Duration>;
+  UnixTime(int64_t ms, uint64_t seq) : TimePoint(ms, seq) {}
 
-  SystemTimePoint(ChronoTimePoint ctp, uint64_t seq)
-      : TimePoint(seq), ctp_(std::move(ctp)) {}
-
-  [[nodiscard]] bool operator==(const SystemTimePoint& other) const {
-    return seq() == other.seq();
+  bool operator==(const UnixTime& other) const {
+    return ms() == other.ms() && seq() == other.seq();
   }
+  bool operator<(const UnixTime& other) const;
 
-  [[nodiscard]] bool operator!=(const SystemTimePoint& other) const {
-    return seq() != other.seq();
-  }
+  Type type() const override { return Type::kUnixTime; }
 
-  [[nodiscard]] bool operator<(const SystemTimePoint& other) const;
-  [[nodiscard]] bool operator>(const SystemTimePoint& other) const;
-  [[nodiscard]] bool operator<=(const SystemTimePoint& other) const;
-  [[nodiscard]] bool operator>=(const SystemTimePoint& other) const;
+  int64_t pttl() const override { return ms() - Now(); }
 
-  [[nodiscard]] Type type() const override { return Type::kSystem; }
-  [[nodiscard]] int64_t Msec() const override {
-    return std::chrono::duration_cast<Unit>(ctp_.time_since_epoch()).count();
-  }
-  [[nodiscard]] int64_t Pttl() const override {
-    return Msec() -
-           std::chrono::duration_cast<Unit>(Clock::now().time_since_epoch())
-               .count();
-  }
+  int64_t ToUnixTime() const override { return ms(); }
+  int64_t ToBootTime() const override;
 
-  [[nodiscard]] static int64_t Now() {
-    auto now = std::chrono::time_point_cast<Duration>(Clock::now());
-    return std::chrono::duration_cast<Duration>(now.time_since_epoch()).count();
-  }
-
-  [[nodiscard]] static ChronoTimePoint FromUnixMsec(int64_t unix_msec) {
-    auto now = std::chrono::time_point_cast<Duration>(Clock::now());
-    int64_t now_msec =
-        std::chrono::duration_cast<Duration>(now.time_since_epoch()).count();
-    return now + Unit(unix_msec - now_msec);
-  }
-
- private:
-  ChronoTimePoint ctp_;
+  static int64_t Now();
 };
 
-// std::chrono::steady_clock 时间点。
-class SteadyTimePoint : public TimePoint {
+class BootTime : public TimePoint {
  public:
-  using Clock = std::chrono::steady_clock;
-  using ChronoTimePoint = std::chrono::time_point<Clock, Duration>;
+  BootTime(int64_t ms, uint64_t seq) : TimePoint(ms, seq) {}
 
-  SteadyTimePoint(ChronoTimePoint ctp, uint64_t seq)
-      : TimePoint(seq), ctp_(std::move(ctp)) {}
-
-  [[nodiscard]] bool operator==(const SteadyTimePoint& other) const {
-    return seq() == other.seq();
+  bool operator==(const BootTime& other) const {
+    return ms() == other.ms() && seq() == other.seq();
   }
+  bool operator<(const BootTime& other) const;
 
-  [[nodiscard]] bool operator!=(const SteadyTimePoint& other) const {
-    return seq() != other.seq();
-  }
+  Type type() const override { return Type::kBootTime; }
 
-  [[nodiscard]] bool operator<(const SteadyTimePoint& other) const;
-  [[nodiscard]] bool operator>(const SteadyTimePoint& other) const;
-  [[nodiscard]] bool operator<=(const SteadyTimePoint& other) const;
-  [[nodiscard]] bool operator>=(const SteadyTimePoint& other) const;
+  int64_t pttl() const override { return ms() - Now(); }
 
-  [[nodiscard]] Type type() const override { return Type::kSteady; }
-  [[nodiscard]] int64_t Msec() const override {
-    return std::chrono::duration_cast<Unit>(ctp_.time_since_epoch()).count();
-  }
-  [[nodiscard]] int64_t Pttl() const override {
-    return Msec() -
-           std::chrono::duration_cast<Unit>(Clock::now().time_since_epoch())
-               .count();
-  }
+  int64_t ToUnixTime() const override;
+  int64_t ToBootTime() const override { return ms(); }
 
-  [[nodiscard]] static int64_t Now() {
-    auto now = std::chrono::time_point_cast<Duration>(Clock::now());
-    return std::chrono::duration_cast<Duration>(now.time_since_epoch()).count();
-  }
-
-  [[nodiscard]] static ChronoTimePoint AfterNowSec(int64_t sec) {
-    auto now = Clock::now();
-    return std::chrono::time_point_cast<Duration>(now) +
-           std::chrono::seconds(sec);
-  }
-
-  [[nodiscard]] static ChronoTimePoint AfterNowMsec(int64_t msec) {
-    auto now = Clock::now();
-    return std::chrono::time_point_cast<Duration>(now) +
-           std::chrono::milliseconds(msec);
-  }
-
- private:
-  ChronoTimePoint ctp_;
+  static int64_t Now();
 };
-
-inline const SystemTimePoint* TimePoint::ToSystem() const {
-  return dynamic_cast<const SystemTimePoint*>(this);
-}
-
-inline const SteadyTimePoint* TimePoint::ToSteady() const {
-  return dynamic_cast<const SteadyTimePoint*>(this);
-}
 
 }  // namespace libcache::expire
 

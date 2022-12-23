@@ -1,12 +1,11 @@
 #include "db.hpp"
 
-#include "snapshot/snapshot_reader.hpp"
-#include "snapshot/snapshot_writer.hpp"
+#include "snapshot/snapshot.hpp"
 #include "string_object.hpp"
 
-using libcache::expire::SteadyTimePoint;
-using libcache::expire::SystemTimePoint;
+using libcache::expire::BootTime;
 using libcache::expire::TimePoint;
+using libcache::expire::UnixTime;
 using libcache::snapshot::SnapshotReader;
 using libcache::snapshot::SnapshotWriter;
 using std::lock_guard;
@@ -14,77 +13,97 @@ using std::make_shared;
 using std::mutex;
 using std::shared_ptr;
 using std::string;
+using std::unique_ptr;
 
 namespace libcache::db {
 
-void DB::Tick() {
+Object::ExpireHelper DB::expire_helper() {
+  Object::ExpireHelper helper;
+  helper.px = [this](const Key& key, int64_t ms) -> BootTime {
+    return boot_tw_.Add(ms, [this, key = key]() { OnExpired(key); });
+  };
+  helper.pxat = [this](const Key& key, int64_t ms) -> UnixTime {
+    return unix_tw_.Add(ms, [this, key = key]() { OnExpired(key); });
+  };
+  helper.persist = [this](const TimePoint* tp) {
+    if (tp->type() == TimePoint::Type::kUnixTime) {
+      auto ut = *dynamic_cast<const UnixTime*>(tp);
+      unix_tw_.Remove(ut);
+    } else {
+      auto bt = *dynamic_cast<const BootTime*>(tp);
+      boot_tw_.Remove(bt);
+    }
+  };
+  return helper;
+}
+
+void DB::CleanUpExpired() {
   lock_guard<mutex> lock(mutex_);
-  system_tw_.Tick();
-  steady_tw_.Tick();
+  unix_tw_.Tick();
+  boot_tw_.Tick();
 }
 
 void DB::DumpSnapshot(Status& status, const string& path) const {
+  status = Status::OK();
   lock_guard<mutex> lock(mutex_);
 
-  auto writer = SnapshotWriter::Open(path, status);
+  unique_ptr<SnapshotWriter> writer;
+  status = SnapshotWriter::Open(path, writer);
   for (const auto& [key, _] : objects_) {
     auto obj = GetObject(key);
     status = writer->Append(key, obj);
-    if (status.Error()) {
-      (void)writer->Close();
+    if (status.error()) {
       return;
     }
   }
-  status = writer->Close();
 }
 
 void DB::LoadSnapshot(Status& status, const string& path) {
-  status = {};
-
+  status = Status::OK();
   lock_guard<mutex> lock(mutex_);
-  Clear();
+  ClearNoLock();
 
-  auto reader = SnapshotReader::Open(path, status);
-  if (status.Error()) {
-    (void)reader->Close();
+  unique_ptr<SnapshotReader> reader;
+  status = SnapshotReader::Open(path, reader);
+  if (status.error()) {
     return;
   }
 
-  int64_t now = SystemTimePoint::Now();
-
   while (1) {
-    auto obj = reader->Read(status);
+    snapshot::Object obj;
+    status = reader->Read(obj);
     if (status.code() == kEof) {
-      status = reader->Close();
       return;
     }
-    if (status.Error()) {
-      Clear();
-      (void)reader->Close();
+    if (status.error()) {
+      ClearNoLock();
       return;
     }
 
-    if (obj.has_string_object()) {
-      auto string_obj = make_shared<StringObject>(obj.string_object().value());
-      PutObject(obj.key(), string_obj);
-      auto pxat = obj.pxat();
-      if (pxat != INT64_MAX && pxat > now) {
-        ExpireAtUnixMsec(obj.key(), pxat);
-      }
-      continue;
+    status = Parse(obj);
+    if (status.error()) {
+      ClearNoLock();
+      return;
     }
-
-    status = Status{kCorrupt};
-    Clear();
-    (void)reader->Close();
-    return;
   }
 }
 
-void DB::Clear() {
+Status DB::Parse(const snapshot::Object& obj) {
+  if (obj.has_string_object()) {
+    auto string_obj = make_shared<StringObject>(obj.key(), expire_helper(),
+                                                obj.string_object().value());
+    string_obj->Parse(obj);
+    PutObject(obj.key(), string_obj);
+    return Status::OK();
+  }
+
+  return Status::Corrupt();
+}
+
+void DB::ClearNoLock() {
   for (auto& [_, obj] : objects_) {
-    if (obj->expire_at()) {
-      RemoveExpire(obj);
+    if (obj->HasExpire()) {
+      obj->Persist();
     }
   }
   objects_.clear();
@@ -97,12 +116,11 @@ shared_ptr<Object> DB::GetObject(const string& key) const {
   }
 
   auto obj = it->second;
-  auto expire_at = obj->expire_at();
-  if (!expire_at) {
+  if (!obj->HasExpire()) {
     return obj;
   }
 
-  int64_t pttl = expire_at->Pttl();
+  int64_t pttl = obj->pttl();
   if (pttl <= 0) {
     return nullptr;
   }
@@ -110,70 +128,21 @@ shared_ptr<Object> DB::GetObject(const string& key) const {
   return obj;
 }
 
-void DB::PutObject(const string& key, shared_ptr<Object> obj) {
-  assert(!HasObject(key));
-  objects_.insert({key, obj});
-}
-
 void DB::DelObject(const string& key) {
   assert(HasObject(key));
 
   auto obj = objects_.at(key);
-  if (obj->expire_at()) {
-    RemoveExpire(obj);
+  if (obj->HasExpire()) {
+    obj->Persist();
   }
   objects_.erase(key);
 }
 
-void DB::ExpireAfterMsec(const string& key, int64_t msec) {
-  assert(msec > 0);
-  assert(HasObject(key));
-
-  auto obj = objects_.at(key);
-  if (obj->expire_at()) {
-    RemoveExpire(obj);
-  }
-
-  auto tp = steady_tw_.Add(
-      SteadyTimePoint::AfterNowMsec(msec),
-      [this, key = key /* 拷贝一份，防止悬垂引用 */]() { OnExpire(key); });
-  auto expire_at = make_shared<SteadyTimePoint>(std::move(tp));
-  obj->set_expire_at(expire_at);
-}
-
-void DB::ExpireAtUnixMsec(const string& key, int64_t msec) {
-  assert(msec > 0);
-  assert(HasObject(key));
-
-  auto obj = objects_.at(key);
-  if (obj->expire_at()) {
-    RemoveExpire(obj);
-  }
-
-  auto tp = system_tw_.Add(
-      SystemTimePoint::FromUnixMsec(msec),
-      [this, key = key /* 拷贝一份，防止悬垂引用 */]() { OnExpire(key); });
-  auto expire_at = make_shared<SystemTimePoint>(std::move(tp));
-  obj->set_expire_at(expire_at);
-}
-
-void DB::RemoveExpire(shared_ptr<Object> obj) {
-  auto expire_at = obj->expire_at();
-  assert(expire_at);
-
-  if (expire_at->type() == TimePoint::Type::kSystem) {
-    system_tw_.Remove(*expire_at->ToSystem());
-  } else {
-    steady_tw_.Remove(*expire_at->ToSteady());
-  }
-  obj->set_expire_at(nullptr);
-}
-
-void DB::OnExpire(const string& key) {
+void DB::OnExpired(const Key& key) {
   auto it = objects_.find(key);
   assert(it != objects_.end());
   auto obj = it->second;
-  obj->set_expire_at(nullptr);
+  assert(obj->HasExpire());
   objects_.erase(it);
 }
 

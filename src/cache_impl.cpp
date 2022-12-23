@@ -1,6 +1,6 @@
 #include "cache_impl.hpp"
 
-#include "status.hpp"
+#include "libcache/error.hpp"
 
 using libcache::db::DB;
 using std::make_unique;
@@ -9,9 +9,9 @@ using std::string;
 namespace libcache {
 
 Cache* Cache::New(const Options& options) {
-  Status status;
+  auto status = Status::OK();
   auto result = New(status, options);
-  ThrowIfError(status);
+  status.ThrowIfError();
   return result;
 }
 
@@ -20,43 +20,38 @@ Cache* Cache::New(Status& status, const Options& options) {
 }
 
 static Status CheckOptions(const Options& options) {
-  if (options.db_count == 0) {
-    return Status{kDBCountIsZero};
+  if (options.db_options_array.empty()) {
+    return Status::InvalidOptions("options.db_options_array can't be empty");
   }
-  if (options.expire_timer_interval == 0) {
-    return Status{kExpireTimerIntervalIsZero};
+  if (options.timer_interval == 0) {
+    return Status::InvalidOptions(
+        "options.timer_interval must be greater than zero");
   }
-  if (options.system_time_wheel_bucket_count == 0) {
-    return Status{kSystemTimeWheelBucketCountIsZero};
+
+  for (const auto& db_options : options.db_options_array) {
+    if (db_options.time_wheel_size == 0) {
+      return Status::InvalidOptions(
+          "db_options.time_wheel_size must be greater than zero");
+    }
   }
-  if (options.steady_time_wheel_bucket_count == 0) {
-    return Status{kSteadyTimeWheelBucketCountIsZero};
-  }
-  return {};
+  return Status::OK();
 }
 
 CacheImpl* CacheImpl::New(Status& status, const Options& options) {
   status = CheckOptions(options);
-  if (status.Error()) {
+  if (status.error()) {
     return nullptr;
   }
   return new CacheImpl(options);
 }
 
 CacheImpl::CacheImpl(const Options& options)
-    : dbs_(options.db_count),
-      timer(options.expire_timer_interval * 1000,
-            [this]() { TimerCallback(); }) {
-  for (auto& db : dbs_) {
-    db = make_unique<DB>(options);
+    : dbs_(options.db_options_array.size()),
+      timer(options.timer_interval, [this]() { TimerCallback(); }) {
+  for (size_t i = 0; i < dbs_.size(); i++) {
+    dbs_[i] = make_unique<DB>(options.db_options_array[i]);
   }
   timer.Start();
-}
-
-void CacheImpl::TimerCallback() {
-  for (auto& db : dbs_) {
-    db->Tick();
-  }
 }
 
 void CacheImpl::DumpSnapshot(const string& path) {
@@ -64,9 +59,9 @@ void CacheImpl::DumpSnapshot(const string& path) {
 }
 
 void CacheImpl::DumpSnapshot(size_t db, const string& path) {
-  Status status;
+  auto status = Status::OK();
   DumpSnapshot(status, db, path);
-  ThrowIfError(status);
+  status.ThrowIfError();
 }
 
 void CacheImpl::DumpSnapshot(Status& status, const string& path) {
@@ -75,7 +70,7 @@ void CacheImpl::DumpSnapshot(Status& status, const string& path) {
 
 void CacheImpl::DumpSnapshot(Status& status, size_t db, const string& path) {
   if (db >= dbs_.size()) {
-    status = Status{kDBIndexOutOfRange};
+    status = Status::DBIndexOutOfRange();
     return;
   }
   dbs_[db]->DumpSnapshot(status, path);
@@ -86,9 +81,9 @@ void CacheImpl::LoadSnapshot(const string& path) {
 }
 
 void CacheImpl::LoadSnapshot(size_t db, const string& path) {
-  Status status;
+  auto status = Status::OK();
   LoadSnapshot(status, db, path);
-  ThrowIfError(status);
+  status.ThrowIfError();
 }
 
 void CacheImpl::LoadSnapshot(Status& status, const string& path) {
@@ -97,7 +92,7 @@ void CacheImpl::LoadSnapshot(Status& status, const string& path) {
 
 void CacheImpl::LoadSnapshot(Status& status, size_t db, const string& path) {
   if (db >= dbs_.size()) {
-    status = Status{kDBIndexOutOfRange};
+    status = Status::DBIndexOutOfRange();
     return;
   }
   dbs_[db]->LoadSnapshot(status, path);

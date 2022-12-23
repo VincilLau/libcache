@@ -1,7 +1,6 @@
 #ifndef LIBCACHE_INCLUDE_LIBCACHE_FLAGS_HPP_
 #define LIBCACHE_INCLUDE_LIBCACHE_FLAGS_HPP_
 
-// 命令的选项标志
 #define NX (1ULL)
 #define XX (1ULL << 1)
 #define GT (1ULL << 2)

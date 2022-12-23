@@ -1,47 +1,18 @@
 #include "string_object.hpp"
 
-#include <iostream>
-
 #include "snapshot.pb.h"
+#include "util/str.hpp"
 
-using std::get_if;
+using libcache::util::StrToU64;
 using std::string;
 
 namespace libcache::db {
 
 Encoding StringObject::encoding() const {
-  auto str = get_if<string>(&value_);
-  if (str) {
+  if (IsRaw()) {
     return Encoding::kRaw;
   }
-  assert(get_if<int64_t>(&value_));
   return Encoding::kInt;
-}
-
-[[nodiscard]] static bool StrToU64(const char* str, uint64_t& u64) {
-  if (*str == '\0') {
-    return false;
-  }
-
-  u64 = 0;
-
-  for (size_t i = 0; str[i]; i++) {
-    char ch = str[i];
-    if (ch < '0' || ch > '9') {
-      return false;
-    }
-    if (u64 > UINT64_MAX / 10) {
-      return false;
-    }
-    u64 *= 10;
-    uint64_t digit = ch - '0';
-    if (u64 > UINT64_MAX - digit) {
-      return false;
-    }
-    u64 += digit;
-  }
-
-  return true;
 }
 
 void StringObject::Update(const string& value) {
@@ -70,8 +41,8 @@ void StringObject::Update(const string& value) {
   }
 }
 
-string StringObject::Serialize(const string& key) {
-  auto obj = SnapshotObject(key);
+string StringObject::Serialize() {
+  auto obj = SnapshotObject();
   obj.mutable_string_object()->set_value(String());
   return obj.SerializeAsString();
 }

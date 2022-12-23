@@ -2,9 +2,8 @@
 
 #include "db/db.hpp"
 
-using libcache::expire::SteadyTimePoint;
-using libcache::expire::SystemTimePoint;
 using libcache::expire::TimePoint;
+using libcache::expire::UnixTime;
 using std::lock_guard;
 using std::mutex;
 using std::optional;
@@ -14,8 +13,7 @@ using std::chrono::duration_cast;
 
 namespace libcache::db {
 
-optional<Encoding> DB::ObjectEncoding(Status& status, const string& key) const {
-  status = {};
+optional<Encoding> DB::ObjectEncoding(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
@@ -25,21 +23,17 @@ optional<Encoding> DB::ObjectEncoding(Status& status, const string& key) const {
   return obj->encoding();
 }
 
-optional<int64_t> DB::ObjectIdleTime(Status& status, const string& key) const {
-  status = {};
+optional<int64_t> DB::ObjectIdleTime(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
   if (!obj) {
     return {};
   }
-  auto now = SteadyTimePoint::Now();
-  auto msec = now - obj->access_time();
-  return msec / 1000;
+  return obj->idletime() / 1000;
 }
 
-int64_t DB::Persist(Status& status, const string& key) {
-  status = {};
+int64_t DB::Persist(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
@@ -47,26 +41,23 @@ int64_t DB::Persist(Status& status, const string& key) {
     return 0;
   }
   obj->Touch();
-
-  auto expire_at = obj->expire_at();
-  if (!expire_at) {
-    return 0;
-  }
-  RemoveExpire(obj);
+  obj->Persist();
   return 1;
 }
 
 int64_t DB::PExpire(Status& status, const string& key, int64_t milliseconds,
                     uint64_t flags) {
-  status = {};
+  status = Status::OK();
 
   flags &= NX | XX | GT | LT;
   if (flags & NX && flags != NX) {
-    status = Status{kNxAndXxGtOrLtNotCompatible};
+    status = Status::InvalidFlags(
+        "NX and XX, GT or LT flags at the same time are not compatible");
     return INT64_MIN;
   }
   if (flags & GT && flags & LT) {
-    status = Status{kGtAndLtNotCompatible};
+    status = Status::InvalidFlags(
+        "GT and LT flags at the same time are not compatible");
     return INT64_MIN;
   }
 
@@ -77,43 +68,45 @@ int64_t DB::PExpire(Status& status, const string& key, int64_t milliseconds,
   }
   obj->Touch();
 
-  auto expire_at = obj->expire_at();
-  if (expire_at) {
+  int64_t pttl = obj->pttl();
+  if (obj->HasExpire()) {
     if (flags & NX) {
       return 0;
     }
     if (flags & GT) {
-      if (expire_at->Pttl() <= milliseconds) {
+      if (pttl <= milliseconds) {
         return 0;
       }
     }
     if (flags & LT) {
-      if (expire_at->Pttl() >= milliseconds) {
+      if (pttl >= milliseconds) {
         return 0;
       }
     }
-    ExpireAfterMsec(key, milliseconds);
+    obj->Px(milliseconds);
     return 1;
   }
 
   if (flags & XX) {
     return 0;
   }
-  ExpireAfterMsec(key, milliseconds);
+  obj->Px(milliseconds);
   return 1;
 }
 
 int64_t DB::PExpireAt(Status& status, const string& key,
                       int64_t unix_time_milliseconds, uint64_t flags) {
-  status = {};
+  status = Status::OK();
 
   flags &= NX | XX | GT | LT;
   if (flags & NX && flags != NX) {
-    status = Status{kNxAndXxGtOrLtNotCompatible};
+    status = Status::InvalidFlags(
+        "NX and XX, GT or LT flags at the same time are not compatible");
     return INT64_MIN;
   }
   if (flags & GT && flags & LT) {
-    status = Status{kGtAndLtNotCompatible};
+    status = Status::InvalidFlags(
+        "GT and LT flags at the same time are not compatible");
     return INT64_MIN;
   }
 
@@ -124,34 +117,32 @@ int64_t DB::PExpireAt(Status& status, const string& key,
   }
   obj->Touch();
 
-  auto expire_at = obj->expire_at();
-  if (expire_at) {
+  if (obj->HasExpire()) {
     if (flags & NX) {
       return 0;
     }
     if (flags & GT) {
-      if (expire_at->Msec() <= unix_time_milliseconds) {
+      if (obj->expire_unix() <= unix_time_milliseconds) {
         return 0;
       }
     }
     if (flags & LT) {
-      if (expire_at->Msec() >= unix_time_milliseconds) {
+      if (obj->expire_unix() >= unix_time_milliseconds) {
         return 0;
       }
     }
-    ExpireAtUnixMsec(key, unix_time_milliseconds);
+    obj->Pxat(unix_time_milliseconds);
     return 1;
   }
 
   if (flags & XX) {
     return 0;
   }
-  ExpireAtUnixMsec(key, unix_time_milliseconds);
+  obj->Pxat(unix_time_milliseconds);
   return 1;
 }
 
-int64_t DB::PExpireTime(Status& status, const string& key) const {
-  status = {};
+int64_t DB::PExpireTime(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
@@ -160,29 +151,13 @@ int64_t DB::PExpireTime(Status& status, const string& key) const {
   }
   obj->Touch();
 
-  auto expire_at = obj->expire_at();
-  if (!expire_at) {
+  if (obj->HasExpire()) {
     return -1;
   }
-
-  if (expire_at->type() == TimePoint::Type::kSystem) {
-    return expire_at->Msec();
-  }
-
-  // 相对过期时间的时间戳只能估算。
-  int64_t system_now_msec =
-      duration_cast<TimePoint::Duration>(
-          SystemTimePoint::Clock::now().time_since_epoch())
-          .count();
-  int64_t steady_now_msec =
-      duration_cast<TimePoint::Duration>(
-          SteadyTimePoint::Clock::now().time_since_epoch())
-          .count();
-  return expire_at->Msec() + (system_now_msec - steady_now_msec);
+  return obj->expire_unix();
 }
 
-int64_t DB::Pttl(Status& status, const string& key) const {
-  status = {};
+int64_t DB::Pttl(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
@@ -191,15 +166,13 @@ int64_t DB::Pttl(Status& status, const string& key) const {
   }
   obj->Touch();
 
-  auto expire_at = obj->expire_at();
-  if (!expire_at) {
+  if (obj->HasExpire()) {
     return -1;
   }
-  return expire_at->Pttl();
+  return obj->pttl();
 }
 
-int64_t DB::Touch(Status& status, const vector<string>& keys) {
-  status = {};
+int64_t DB::Touch(const vector<string>& keys) {
   lock_guard<mutex> lock(mutex_);
 
   int64_t count = 0;
@@ -213,8 +186,7 @@ int64_t DB::Touch(Status& status, const vector<string>& keys) {
   return count;
 }
 
-enum Type DB::Type(Status& status, const string& key) const {
-  status = {};
+enum Type DB::Type(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);

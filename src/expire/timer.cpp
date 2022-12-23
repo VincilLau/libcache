@@ -1,8 +1,5 @@
 #include "timer.hpp"
 
-#include <cassert>
-#include <chrono>
-
 using std::chrono::milliseconds;
 using std::chrono::steady_clock;
 
@@ -29,9 +26,7 @@ Timer::~Timer() {
 }
 
 void Timer::Start() {
-  assert(interval_ > 0);
-
-  next_tick_ = steady_clock::now() + milliseconds(interval_);
+  until_ = steady_clock::now() + milliseconds(interval_ms_);
   stop_ = false;
   thread_ = thread([this]() { Loop(); });
 }
@@ -40,14 +35,14 @@ void Timer::Loop() {
   while (1) {
     {
       unique_lock<mutex> lock(mutex_);
-      cv_.wait_until(lock, next_tick_, [this]() { return stop_; });
+      cv_.wait_until(lock, until_, [this]() { return stop_; });
       if (stop_) {
-        break;
+        return;
       }
     }
 
     callback_();
-    next_tick_ += milliseconds(interval_);
+    until_ += milliseconds(interval_ms_);
   }
 }
 

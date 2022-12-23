@@ -11,7 +11,7 @@ using std::string;
 namespace libcache::db {
 
 optional<string> DB::Get(Status& status, const string& key) const {
-  status = {};
+  status = Status::OK();
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
@@ -21,7 +21,7 @@ optional<string> DB::Get(Status& status, const string& key) const {
   obj->Touch();
 
   if (!obj->IsString()) {
-    status = Status{kWrongType};
+    status = Status::WrongType();
     return {};
   }
 
@@ -31,15 +31,15 @@ optional<string> DB::Get(Status& status, const string& key) const {
 
 optional<string> DB::Set(Status& status, const string& key, const string& value,
                          uint64_t flags, const Expiration& expiration) {
-  status = {};
+  status = Status::OK();
 
   flags &= NX | XX | KEEPTTL | GET;
   if (flags & (NX & XX)) {
-    status = Status{kSyntaxError};
+    status = Status::SyntaxError();
     return {};
   }
   if ((flags & KEEPTTL) && (expiration != NO_EXPIRE)) {
-    status = Status{kSyntaxError};
+    status = Status::SyntaxError();
     return {};
   }
 
@@ -55,12 +55,12 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
       DelObject(key);
     }
 
-    auto new_obj = make_shared<StringObject>(value);
+    auto new_obj = make_shared<StringObject>(key, expire_helper(), value);
     PutObject(key, new_obj);
     if (expiration.px != INT64_MAX) {
-      ExpireAfterMsec(key, expiration.px);
+      new_obj->Px(expiration.px);
     } else if (expiration.pxat != INT64_MAX) {
-      ExpireAtUnixMsec(key, expiration.pxat);
+      new_obj->Pxat(expiration.pxat);
     }
     return (flags & GET) ? optional<string>{} : "OK";
   }
@@ -72,40 +72,40 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
     if (old_obj->IsString()) {
       return dynamic_pointer_cast<StringObject>(old_obj)->String();
     }
-    status = Status{kWrongType};
+    status = Status::WrongType();
     return {};
   }
 
   if (old_obj->IsString()) {
     old_obj->Touch();
 
-    auto string_obj = dynamic_pointer_cast<StringObject>(old_obj);
+    auto string_obj = make_shared<StringObject>(key, expire_helper(), value);
     auto old_string = string_obj->String();
     string_obj->Update(value);
 
     if (expiration.px != INT64_MAX) {
-      ExpireAfterMsec(key, expiration.px);
+      string_obj->Px(expiration.px);
     } else if (expiration.pxat != INT64_MAX) {
-      ExpireAtUnixMsec(key, expiration.pxat);
-    } else if (!(flags & KEEPTTL) && string_obj->expire_at()) {
-      RemoveExpire(string_obj);
+      string_obj->Pxat(expiration.pxat);
+    } else if (!(flags & KEEPTTL) && string_obj->HasExpire()) {
+      string_obj->Persist();
     }
 
     return (flags & GET) ? std::move(old_string) : "OK";
   }
 
   if (flags & GET) {
-    status = Status{kWrongType};
+    status = Status::WrongType();
     return {};
   }
 
   DelObject(key);
-  auto string_obj = make_shared<StringObject>(value);
+  auto string_obj = make_shared<StringObject>(key, expire_helper(), value);
   PutObject(key, string_obj);
   if (expiration.px != INT64_MAX) {
-    ExpireAfterMsec(key, expiration.px);
+    string_obj->Px(expiration.px);
   } else if (expiration.pxat != INT64_MAX) {
-    ExpireAtUnixMsec(key, expiration.pxat);
+    string_obj->Pxat(expiration.pxat);
   }
   return "OK";
 }

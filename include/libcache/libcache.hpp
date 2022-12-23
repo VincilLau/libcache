@@ -5,7 +5,7 @@
 #include "error.hpp"
 #include "expiration.hpp"
 #include "flags.hpp"
-#include "object.hpp"
 #include "options.hpp"
+#include "types.hpp"
 
 #endif  // LIBCACHE_INCLUDE_LIBCACHE_LIBCACHE_HPP_
