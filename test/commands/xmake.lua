@@ -1,0 +1,7 @@
+target("test-commands-string")
+    set_kind("binary")
+    set_group("test")
+    add_includedirs("$(projectdir)/include")
+    add_files("string_test.cpp")
+    add_deps("libcache")
+    add_packages("gtest")

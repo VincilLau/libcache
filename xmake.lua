@@ -12,3 +12,5 @@ target("libcache")
     add_files("src/**.cpp")
     add_files("$(projectdir)/proto/*.proto")
     add_packages("crc32c", "protobuf-cpp")
+
+includes("test")
