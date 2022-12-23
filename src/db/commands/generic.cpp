@@ -166,7 +166,7 @@ int64_t DB::Pttl(const string& key) const {
   }
   obj->Touch();
 
-  if (obj->HasExpire()) {
+  if (!obj->HasExpire()) {
     return -1;
   }
   return obj->pttl();
