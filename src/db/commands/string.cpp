@@ -26,8 +26,8 @@ optional<string> DB::Get(Status& status, const string& key) const {
     return {};
   }
 
-  auto string_obj = dynamic_pointer_cast<StringObject>(obj);
-  return string_obj->String();
+  auto str_obj = dynamic_pointer_cast<StringObject>(obj);
+  return str_obj->String();
 }
 
 optional<string> DB::Set(Status& status, const string& key, const string& value,
@@ -80,19 +80,19 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
   if (old_obj->IsString()) {
     old_obj->Touch();
 
-    auto string_obj = dynamic_pointer_cast<StringObject>(old_obj);
-    auto old_string = string_obj->String();
-    string_obj->Update(value);
+    auto str_obj = dynamic_pointer_cast<StringObject>(old_obj);
+    auto old_str = str_obj->String();
+    str_obj->Update(value);
 
     if (expiration.px != INT64_MAX) {
-      string_obj->Px(expiration.px);
+      str_obj->Px(expiration.px);
     } else if (expiration.pxat != INT64_MAX) {
-      string_obj->Pxat(expiration.pxat);
-    } else if (!(flags & KEEPTTL) && string_obj->HasExpire()) {
-      string_obj->Persist();
+      str_obj->Pxat(expiration.pxat);
+    } else if (!(flags & KEEPTTL) && str_obj->HasExpire()) {
+      str_obj->Persist();
     }
 
-    return (flags & GET) ? move(old_string) : "OK";
+    return (flags & GET) ? move(old_str) : "OK";
   }
 
   if (flags & GET) {
@@ -101,12 +101,12 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
   }
 
   DelObject(key);
-  auto string_obj = make_shared<StringObject>(key, expire_helper(), value);
-  PutObject(key, string_obj);
+  auto str_obj = make_shared<StringObject>(key, expire_helper(), value);
+  PutObject(key, str_obj);
   if (expiration.px != INT64_MAX) {
-    string_obj->Px(expiration.px);
+    str_obj->Px(expiration.px);
   } else if (expiration.pxat != INT64_MAX) {
-    string_obj->Pxat(expiration.pxat);
+    str_obj->Pxat(expiration.pxat);
   }
   return "OK";
 }
