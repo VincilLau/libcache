@@ -112,13 +112,15 @@ shared_ptr<Object> DB::GetObject(const string& key) const {
   return obj;
 }
 
-void DB::DelObject(const string& key) {
-  assert(HasObject(key));
+void DB::PutObject(const std::string& key, std::shared_ptr<Object> obj) {
+  assert(!GetObject(key));
+  objects_.erase(key);
+  assert(key == obj->key());
+  objects_[key] = obj;
+}
 
-  auto obj = objects_.at(key);
-  if (obj->HasExpire()) {
-    obj->Persist();
-  }
+void DB::DelObject(const string& key) {
+  assert(GetObject(key));
   objects_.erase(key);
 }
 

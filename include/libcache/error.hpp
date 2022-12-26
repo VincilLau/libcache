@@ -19,6 +19,7 @@ static constexpr size_t kEof = 8;
 static constexpr size_t kCorrupt = 9;
 static constexpr size_t kChecksumNotMatch = 10;
 static constexpr size_t kInvalidOptions = 11;
+static constexpr size_t kInvalidInt64 = 12;
 
 class Status {
  public:
@@ -58,6 +59,9 @@ class Status {
   }
   static Status InvalidOptions(std::string what) {
     return {kInvalidOptions, std::move(what)};
+  }
+  static Status InvalidInt64() {
+    return {kInvalidInt64, "value is not an integer or out of range"};
   }
 
  private:

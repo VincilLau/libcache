@@ -2,14 +2,11 @@
 
 #include "db/db.hpp"
 
-using libcache::expire::TimePoint;
-using libcache::expire::UnixTime;
 using std::lock_guard;
 using std::mutex;
 using std::optional;
 using std::string;
 using std::vector;
-using std::chrono::duration_cast;
 
 namespace libcache::db {
 
@@ -23,7 +20,7 @@ optional<Encoding> DB::ObjectEncoding(const string& key) const {
   return obj->encoding();
 }
 
-optional<int64_t> DB::ObjectIdleTime(const string& key) const {
+optional<int64_t> DB::ObjectIdletime(const string& key) const {
   lock_guard<mutex> lock(mutex_);
 
   auto obj = GetObject(key);
@@ -41,7 +38,10 @@ int64_t DB::Persist(const string& key) const {
     return 0;
   }
   obj->Touch();
-  obj->Persist();
+
+  if (obj->HasExpire()) {
+    obj->Persist();
+  }
   return 1;
 }
 
@@ -149,7 +149,6 @@ int64_t DB::PExpireTime(const string& key) const {
   if (!obj) {
     return -2;
   }
-  obj->Touch();
 
   if (obj->HasExpire()) {
     return -1;
@@ -164,7 +163,6 @@ int64_t DB::Pttl(const string& key) const {
   if (!obj) {
     return -2;
   }
-  obj->Touch();
 
   if (!obj->HasExpire()) {
     return -1;

@@ -30,6 +30,90 @@ int64_t CacheImpl::Append(Status& status, size_t db, const string& key,
   return dbs_[db]->Append(status, key, value);
 }
 
+int64_t CacheImpl::Decr(const string& key) { return Decr(current_db_, key); }
+
+int64_t CacheImpl::Decr(size_t db, const string& key) {
+  auto status = Status::OK();
+  auto result = CacheImpl::Decr(status, db, key);
+  status.ThrowIfError();
+  return result;
+}
+
+int64_t CacheImpl::Decr(Status& status, const string& key) {
+  return Decr(status, current_db_, key);
+}
+
+int64_t CacheImpl::Decr(Status& status, size_t db, const string& key) {
+  return DecrBy(status, db, key, 1);
+}
+
+int64_t CacheImpl::DecrBy(const string& key, int64_t decrement) {
+  return DecrBy(current_db_, key, decrement);
+}
+
+int64_t CacheImpl::DecrBy(size_t db, const string& key, int64_t decrement) {
+  auto status = Status::OK();
+  auto result = CacheImpl::DecrBy(status, db, key, decrement);
+  status.ThrowIfError();
+  return result;
+}
+
+int64_t CacheImpl::DecrBy(Status& status, const string& key,
+                          int64_t decrement) {
+  return DecrBy(status, current_db_, key, decrement);
+}
+
+int64_t CacheImpl::DecrBy(Status& status, size_t db, const string& key,
+                          int64_t decrement) {
+  if (db >= dbs_.size()) {
+    status = Status::DBIndexOutOfRange();
+    return {};
+  }
+  return dbs_[db]->DecrBy(status, key, decrement);
+}
+
+int64_t CacheImpl::Incr(const string& key) { return Incr(current_db_, key); }
+
+int64_t CacheImpl::Incr(size_t db, const string& key) {
+  auto status = Status::OK();
+  auto result = CacheImpl::Incr(status, db, key);
+  status.ThrowIfError();
+  return result;
+}
+
+int64_t CacheImpl::Incr(Status& status, const string& key) {
+  return Incr(status, current_db_, key);
+}
+
+int64_t CacheImpl::Incr(Status& status, size_t db, const string& key) {
+  return IncrBy(status, db, key, 1);
+}
+
+int64_t CacheImpl::IncrBy(const string& key, int64_t decrement) {
+  return IncrBy(current_db_, key, decrement);
+}
+
+int64_t CacheImpl::IncrBy(size_t db, const string& key, int64_t decrement) {
+  auto status = Status::OK();
+  auto result = CacheImpl::IncrBy(status, db, key, decrement);
+  status.ThrowIfError();
+  return result;
+}
+
+int64_t CacheImpl::IncrBy(Status& status, const string& key,
+                          int64_t decrement) {
+  return IncrBy(status, current_db_, key, decrement);
+}
+
+int64_t CacheImpl::IncrBy(Status& status, size_t db, const string& key,
+                          int64_t increment) {
+  if (db >= dbs_.size()) {
+    status = Status::DBIndexOutOfRange();
+    return {};
+  }
+  return dbs_[db]->IncrBy(status, key, increment);
+}
+
 optional<string> CacheImpl::Get(const string& key) {
   return Get(current_db_, key);
 }

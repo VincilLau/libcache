@@ -28,7 +28,7 @@ class DB {
     ClearNoLock();
   }
   std::optional<Encoding> ObjectEncoding(const std::string& key) const;
-  std::optional<int64_t> ObjectIdleTime(const std::string& key) const;
+  std::optional<int64_t> ObjectIdletime(const std::string& key) const;
   int64_t Persist(const std::string& key) const;
   int64_t PExpire(Status& status, const std::string& key, int64_t milliseconds,
                   uint64_t flags);
@@ -41,6 +41,8 @@ class DB {
 
   int64_t Append(Status& status, const std::string& key,
                  const std::string& value);
+  int64_t DecrBy(Status& status, const std::string& key, int64_t decrement);
+  int64_t IncrBy(Status& status, const std::string& key, int64_t increment);
   std::optional<std::string> Get(Status& status, const std::string& key) const;
   std::optional<std::string> Set(Status& status, const std::string& key,
                                  const std::string& value, uint64_t flags,
@@ -52,15 +54,11 @@ class DB {
 
   void ClearNoLock();
 
-  bool HasObject(const std::string& key) const {
+  bool HasObjectIgnoreExpire(const std::string& key) const {
     return objects_.find(key) != objects_.end();
   }
   std::shared_ptr<Object> GetObject(const std::string& key) const;
-  void PutObject(const std::string& key, std::shared_ptr<Object> obj) {
-    assert(!HasObject(key));
-    assert(key == obj->key());
-    objects_[key] = obj;
-  }
+  void PutObject(const std::string& key, std::shared_ptr<Object> obj);
   void DelObject(const std::string& key);
 
   mutable std::mutex mutex_;

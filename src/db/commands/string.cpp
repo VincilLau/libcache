@@ -8,6 +8,7 @@ using std::move;
 using std::mutex;
 using std::optional;
 using std::string;
+using std::to_string;
 
 namespace libcache::db {
 
@@ -21,12 +22,76 @@ int64_t DB::Append(Status& status, const string& key, const string& value) {
     PutObject(key, str_obj);
     return value.size();
   }
-
   obj->Touch();
+
   auto str_obj = dynamic_pointer_cast<StringObject>(obj);
   auto& raw = str_obj->mut_raw();
   raw.append(value);
   return raw.size();
+}
+
+int64_t DB::DecrBy(Status& status, const string& key, int64_t decrement) {
+  status = Status::OK();
+  lock_guard<mutex> lock(mutex_);
+
+  auto obj = GetObject(key);
+  if (!obj) {
+    auto str_obj = make_shared<StringObject>(key, expire_helper(), -decrement);
+    PutObject(key, str_obj);
+    return -decrement;
+  }
+  obj->Touch();
+
+  if (!obj->IsString()) {
+    status = Status::WrongType();
+    return {};
+  }
+
+  auto str_obj = dynamic_pointer_cast<StringObject>(obj);
+  if (str_obj->IsRaw()) {
+    status = Status::InvalidInt64();
+    return 0;
+  }
+  auto old_i64 = str_obj->i64();
+  if (old_i64 < INT64_MIN + decrement) {
+    status = Status::InvalidInt64();
+    return 0;
+  }
+  auto new_i64 = old_i64 - decrement;
+  str_obj->set_i64(new_i64);
+  return new_i64;
+}
+
+int64_t DB::IncrBy(Status& status, const string& key, int64_t increment) {
+  status = Status::OK();
+  lock_guard<mutex> lock(mutex_);
+
+  auto obj = GetObject(key);
+  if (!obj) {
+    auto str_obj = make_shared<StringObject>(key, expire_helper(), increment);
+    PutObject(key, str_obj);
+    return increment;
+  }
+  obj->Touch();
+
+  if (!obj->IsString()) {
+    status = Status::WrongType();
+    return {};
+  }
+
+  auto str_obj = dynamic_pointer_cast<StringObject>(obj);
+  if (str_obj->IsRaw()) {
+    status = Status::InvalidInt64();
+    return 0;
+  }
+  auto old_i64 = str_obj->i64();
+  if (old_i64 > INT64_MAX - increment) {
+    status = Status::InvalidInt64();
+    return 0;
+  }
+  auto new_i64 = INT64_MAX - increment;
+  str_obj->set_i64(new_i64);
+  return new_i64;
 }
 
 optional<string> DB::Get(Status& status, const string& key) const {
@@ -68,10 +133,6 @@ optional<string> DB::Set(Status& status, const string& key, const string& value,
   if (!old_obj) {
     if (flags & XX) {
       return {};
-    }
-
-    if (HasObject(key)) {
-      DelObject(key);
     }
 
     auto new_obj = make_shared<StringObject>(key, expire_helper(), value);

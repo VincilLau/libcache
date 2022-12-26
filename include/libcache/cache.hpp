@@ -138,6 +138,32 @@ class Cache {
   virtual int64_t Append(Status& status, size_t db, const std::string& key,
                          const std::string& value) = 0;
 
+  virtual int64_t Decr(const std::string& key) = 0;
+  virtual int64_t Decr(size_t db, const std::string& key) = 0;
+  virtual int64_t Decr(Status& status, const std::string& key) = 0;
+  virtual int64_t Decr(Status& status, size_t db, const std::string& key) = 0;
+
+  virtual int64_t DecrBy(const std::string& key, int64_t decrement) = 0;
+  virtual int64_t DecrBy(size_t db, const std::string& key,
+                         int64_t decrement) = 0;
+  virtual int64_t DecrBy(Status& status, const std::string& key,
+                         int64_t decrement) = 0;
+  virtual int64_t DecrBy(Status& status, size_t db, const std::string& key,
+                         int64_t decrement) = 0;
+
+  virtual int64_t Incr(const std::string& key) = 0;
+  virtual int64_t Incr(size_t db, const std::string& key) = 0;
+  virtual int64_t Incr(Status& status, const std::string& key) = 0;
+  virtual int64_t Incr(Status& status, size_t db, const std::string& key) = 0;
+
+  virtual int64_t IncrBy(const std::string& key, int64_t increment) = 0;
+  virtual int64_t IncrBy(size_t db, const std::string& key,
+                         int64_t increment) = 0;
+  virtual int64_t IncrBy(Status& status, const std::string& key,
+                         int64_t increment) = 0;
+  virtual int64_t IncrBy(Status& status, size_t db, const std::string& key,
+                         int64_t increment) = 0;
+
   virtual std::optional<std::string> Get(const std::string& key) = 0;
   virtual std::optional<std::string> Get(size_t db, const std::string& key) = 0;
   virtual std::optional<std::string> Get(Status& status,

@@ -121,7 +121,7 @@ optional<int64_t> CacheImpl::ObjectIdleTime(Status& status, size_t db,
     status = Status::DBIndexOutOfRange();
     return INT64_MIN;
   }
-  return dbs_[db]->ObjectIdleTime(key);
+  return dbs_[db]->ObjectIdletime(key);
 }
 
 int64_t CacheImpl::Persist(const string& key) {

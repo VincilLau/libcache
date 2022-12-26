@@ -128,6 +128,30 @@ class CacheImpl : public Cache {
   int64_t Append(Status& status, size_t db, const std::string& key,
                  const std::string& value) override;
 
+  int64_t Decr(const std::string& key) override;
+  int64_t Decr(size_t db, const std::string& key) override;
+  int64_t Decr(Status& status, const std::string& key) override;
+  int64_t Decr(Status& status, size_t db, const std::string& key) override;
+
+  int64_t DecrBy(const std::string& key, int64_t decrement) override;
+  int64_t DecrBy(size_t db, const std::string& key, int64_t decrement) override;
+  int64_t DecrBy(Status& status, const std::string& key,
+                 int64_t decrement) override;
+  int64_t DecrBy(Status& status, size_t db, const std::string& key,
+                 int64_t decrement) override;
+
+  int64_t Incr(const std::string& key) override;
+  int64_t Incr(size_t db, const std::string& key) override;
+  int64_t Incr(Status& status, const std::string& key) override;
+  int64_t Incr(Status& status, size_t db, const std::string& key) override;
+
+  int64_t IncrBy(const std::string& key, int64_t increment) override;
+  int64_t IncrBy(size_t db, const std::string& key, int64_t increment) override;
+  int64_t IncrBy(Status& status, const std::string& key,
+                 int64_t increment) override;
+  int64_t IncrBy(Status& status, size_t db, const std::string& key,
+                 int64_t increment) override;
+
   std::optional<std::string> Get(const std::string& key) override;
   std::optional<std::string> Get(size_t db, const std::string& key) override;
   std::optional<std::string> Get(Status& status,
